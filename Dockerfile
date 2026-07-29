@@ -1,48 +1,56 @@
 # ==============================================================================
-# DocFlow Pro - Production Dockerfile
-# Optimized for Python 3.11, PyTorch (CPU), OpenCV Headless & EasyOCR Runtime
+# DocFlow Pro - Production Dockerfile for Render
+# Python 3.11 + OpenCV + EasyOCR + PyTorch (CPU)
 # ==============================================================================
+
 FROM python:3.11-slim
 
-# Prevent interactive prompts during package installation
+# Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8501
 
-# Install system C/C++ build tools and OpenCV/PyTorch image dependencies
+# Install system dependencies required by OpenCV & EasyOCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    curl \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
-    curl \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory
 WORKDIR /app
 
-# Upgrade pip and install PyTorch CPU version explicitly for fast, small build
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Upgrade pip
+RUN pip install --upgrade pip
 
-# Copy requirements and install remaining packages
+# Install PyTorch CPU first
+RUN pip install --no-cache-dir \
+    torch \
+    torchvision \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Copy requirements
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download EasyOCR english model during build phase to accelerate cold startup
-RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
-
-# Copy application codebase
+# Copy project
 COPY . .
 
-# Create required output and upload directories
+# Create runtime folders
 RUN mkdir -p uploads outputs
 
-# Expose default HTTP Port 8501
+# (Optional) Pre-download EasyOCR model during build
+RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False)"
+
+# Expose application port
 EXPOSE 8501
 
-ENV PORT=8501
-
-# Launch Tornado Application Server Daemon
-CMD ["python", "server.py", "8501"]
+# Start the application
+CMD ["python", "server.py"]
