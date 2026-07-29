@@ -1,0 +1,32 @@
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+
+# System & OS
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cloudflared Binaries
+cloudflared
+cloudflared.tgz
+
+# Temporary Data Directories
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+scratch/
+.tempmediaStorage/
+
+# Logs & Environment
+submissions_log.json
+.env
