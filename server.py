@@ -1318,15 +1318,7 @@ class ApiProcessWorkflowHandler(BaseHandler):
 
                 gc.collect()
 
-            if not processed_files_summary:
-                self.set_status(400)
-                self.write({
-                    "status": "error",
-                    "message": "No files were uploaded. Please upload at least one document to process."
-                })
-                return
-
-            print("✅ [STEP 3 OK] All requested documents generated.", flush=True)
+            print("✅ [STEP 3 OK] Requested document processing step complete.", flush=True)
 
             print("📝 [STEP 4] Generating Details.txt...", flush=True)
             mspc_password = generate_mspc_password(applicant_name, dob)
