@@ -302,11 +302,15 @@ WORKFLOWS = {
                     },
                     {
                         "id": "rent_agreement",
-                        "label": "Rent Agreement",
+                        "label": "Rent Agreement (Part 1 + Part 2)",
                         "type": "pdf_only",
+                        "multi_sources": [
+                            {"id": "rent_part1", "label": "Rent Agreement – Part 1", "hint": "Upload Rent Agreement Part 1 (PDF only)"},
+                            {"id": "rent_part2", "label": "Rent Agreement – Part 2", "hint": "Upload Rent Agreement Part 2 (PDF only - Optional)"}
+                        ],
                         "output_name": "Rent_Agreement.pdf",
-                        "max_kb": 150,
-                        "hint": "Accepted format: PDF only (PDF output under 150 KB)"
+                        "max_kb": 125,
+                        "hint": "Upload Part 1 and optional Part 2 (PDF files only). Merged PDF under 125 KB"
                     },
                     {
                         "id": "plan_layout",

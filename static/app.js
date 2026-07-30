@@ -435,8 +435,19 @@ class DocFlowApp {
     const parentDoc = allDocs.find(d => d.id === parentDocId);
     if (!parentDoc || !parentDoc.multi_sources) return;
 
-    let filled = parentDoc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
     const bdg = document.getElementById(`badge_${parentDocId}`);
+    if (parentDocId === "rent_agreement") {
+      const hasPart1 = !!this.uploadedFilesMap["rent_part1"];
+      const hasPart2 = !!this.uploadedFilesMap["rent_part2"];
+      if (bdg) {
+        if (hasPart1 && hasPart2) bdg.innerText = "Part 1 & 2 Ready";
+        else if (hasPart1) bdg.innerText = "Part 1 Ready";
+        else bdg.innerText = "Pending Part 1";
+      }
+      return;
+    }
+
+    let filled = parentDoc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
     if (bdg) {
       bdg.innerText = filled ? "Ready" : "In Progress";
     }
@@ -449,10 +460,18 @@ class DocFlowApp {
 
     for (const doc of allDocs) {
       if (doc.multi_sources) {
-        let filled = doc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
-        if (!filled) {
-          allReady = false;
-          break;
+        if (doc.id === "rent_agreement") {
+          let filled = !!this.uploadedFilesMap["rent_part1"];
+          if (!filled) {
+            allReady = false;
+            break;
+          }
+        } else {
+          let filled = doc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
+          if (!filled) {
+            allReady = false;
+            break;
+          }
         }
       } else if (doc.multi_side) {
         const entry = this.uploadedFilesMap[doc.id];
