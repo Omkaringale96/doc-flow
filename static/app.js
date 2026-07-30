@@ -469,10 +469,21 @@ class DocFlowApp {
 
     const container = document.getElementById(`editor_btn_${targetKey}`);
     if (container) {
+      let extraStudioBtn = "";
+      if (slotId.includes("rent_") || slotId === "rent_agreement") {
+        extraStudioBtn = `
+          <button type="button" class="btn-primary" style="font-size:0.72rem; padding:0.25rem 0.6rem; margin-top:0.3rem; background: var(--accent-purple);" onclick="docFlowApp.openWorkflowFileInStudio('${slotId}')">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Open in PDF Studio
+          </button>
+        `;
+      }
       container.innerHTML = `
-        <button type="button" class="btn-back" style="font-size:0.72rem; padding:0.25rem 0.6rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${targetKey}')">
-          <i class="fa-solid fa-sliders"></i> Pop-up Editor (0°)
-        </button>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+          <button type="button" class="btn-back" style="font-size:0.72rem; padding:0.25rem 0.6rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${targetKey}')">
+            <i class="fa-solid fa-sliders"></i> Pop-up Editor (0°)
+          </button>
+          ${extraStudioBtn}
+        </div>
       `;
     }
   }
@@ -1303,14 +1314,16 @@ class DocFlowApp {
   }
 
   async applyAndExportEditedPdf() {
-    if (!this.nativeEditorFile) {
+    if (!this.nativeEditorFile && !this.studioPdfFile) {
       alert("No PDF file loaded!");
       return;
     }
 
+    const targetFile = this.nativeEditorFile || this.studioPdfFile;
+
     const formData = new FormData();
-    formData.append("file", this.nativeEditorFile);
-    formData.append("output_name", `Edited_${this.nativeEditorFile.name}`);
+    formData.append("file", targetFile);
+    formData.append("output_name", `Edited_${targetFile.name}`);
     formData.append("annotations", JSON.stringify(this.editorAnnotations));
 
     try {
@@ -1326,6 +1339,267 @@ class DocFlowApp {
         document.body.removeChild(link);
 
         this.showToast(`PDF exported successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Export Error: " + data.message);
+      }
+    } catch (e) {
+      alert("PDF Export Exception: " + e.message);
+    }
+  }
+
+  // --- PDF STUDIO MODULE IMPLEMENTATION ---
+  async loadPdfIntoStudio(files) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    this.studioPdfFile = file;
+    this.studioZoom = 1.0;
+
+    document.getElementById("studioEmptyState").style.display = "none";
+    document.getElementById("pdfStudioWorkspace").style.display = "block";
+
+    this.editorAnnotations = {};
+    this.editorActiveTool = 'select';
+
+    try {
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      const buffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
+      this.studioPdfDoc = await loadingTask.promise;
+
+      document.getElementById("studioPageCountBadge").innerText = `${this.studioPdfDoc.numPages} Pages`;
+      document.getElementById("statusCurrentPage").innerText = `Page 1 of ${this.studioPdfDoc.numPages}`;
+
+      await this.renderStudioThumbnails();
+      await this.renderStudioCenterPages();
+      this.showToast(`Loaded ${file.name} into PDF Studio!`);
+    } catch (e) {
+      console.error("PDF Studio Load Error:", e);
+      alert("Failed to load PDF into Studio: " + e.message);
+    }
+  }
+
+  async renderStudioThumbnails() {
+    const listEl = document.getElementById("studioThumbnailsList");
+    if (!listEl || !this.studioPdfDoc) return;
+    listEl.innerHTML = "";
+
+    for (let pageNum = 1; pageNum <= this.studioPdfDoc.numPages; pageNum++) {
+      const page = await this.studioPdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 0.25 });
+
+      const card = document.createElement("div");
+      card.className = "studio-thumb-card";
+      card.style.background = "rgba(255,255,255,0.05)";
+      card.style.border = "1px solid var(--border-glass)";
+      card.style.borderRadius = "8px";
+      card.style.padding = "0.4rem";
+      card.style.textAlign = "center";
+      card.style.cursor = "grab";
+      card.dataset.pageNum = pageNum;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.display = "block";
+      canvas.style.margin = "0 auto 0.4rem";
+      canvas.style.borderRadius = "4px";
+
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+      const label = document.createElement("span");
+      label.style.fontSize = "0.72rem";
+      label.style.color = "var(--text-muted)";
+      label.innerText = `Page ${pageNum}`;
+
+      card.appendChild(canvas);
+      card.appendChild(label);
+      listEl.appendChild(card);
+    }
+
+    if (typeof Sortable !== 'undefined') {
+      Sortable.create(listEl, {
+        animation: 150,
+        onEnd: (evt) => {
+          this.showToast(`Reordered Page ${evt.oldIndex + 1} to Position ${evt.newIndex + 1}!`);
+        }
+      });
+    }
+  }
+
+  async renderStudioCenterPages() {
+    const container = document.getElementById("studioCenterViewport");
+    if (!container || !this.studioPdfDoc) return;
+    container.innerHTML = "";
+
+    for (let pageNum = 1; pageNum <= this.studioPdfDoc.numPages; pageNum++) {
+      const page = await this.studioPdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: this.studioZoom * 1.2 });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "studio-page-wrapper";
+      wrapper.style.position = "relative";
+      wrapper.style.margin = "0 auto 1.5rem";
+      wrapper.style.boxShadow = "0 10px 35px rgba(0,0,0,0.6)";
+      wrapper.style.borderRadius = "8px";
+      wrapper.style.overflow = "hidden";
+      wrapper.dataset.pageNum = pageNum;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.display = "block";
+
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+      const overlay = document.createElement("div");
+      overlay.id = `pageOverlay_${pageNum}`;
+      overlay.className = "pdf-overlay-layer";
+      overlay.style.position = "absolute";
+      overlay.style.top = "0";
+      overlay.style.left = "0";
+      overlay.style.width = `${viewport.width}px`;
+      overlay.style.height = `${viewport.height}px`;
+      overlay.style.cursor = "crosshair";
+
+      overlay.onclick = (e) => this.handlePageOverlayClick(e, pageNum, viewport.width, viewport.height);
+
+      wrapper.appendChild(canvas);
+      wrapper.appendChild(overlay);
+      container.appendChild(wrapper);
+
+      if (!this.editorAnnotations[pageNum]) {
+        this.editorAnnotations[pageNum] = { texts: [], signatures: [], whiteouts: [] };
+      }
+      this.renderAnnotationsOnOverlay(pageNum);
+    }
+  }
+
+  setStudioTool(toolName) {
+    this.editorActiveTool = toolName;
+    const selBtn = document.getElementById("studioBtnSelect");
+    const txtBtn = document.getElementById("studioBtnText");
+    const whtBtn = document.getElementById("studioBtnWhiteout");
+
+    if (selBtn) {
+      selBtn.className = toolName === 'select' ? "btn-primary" : "btn-back";
+      selBtn.style.background = toolName === 'select' ? "var(--accent-blue)" : "";
+    }
+    if (txtBtn) {
+      txtBtn.className = toolName === 'text' ? "btn-primary" : "btn-back";
+      txtBtn.style.background = toolName === 'text' ? "var(--accent-blue)" : "";
+    }
+    if (whtBtn) {
+      whtBtn.className = toolName === 'whiteout' ? "btn-primary" : "btn-back";
+      whtBtn.style.background = toolName === 'whiteout' ? "var(--accent-purple)" : "";
+    }
+  }
+
+  changeStudioZoom(delta) {
+    this.studioZoom = Math.max(0.5, Math.min(2.5, (this.studioZoom || 1.0) + delta));
+    const zVal = document.getElementById("studioZoomVal");
+    if (zVal) zVal.innerText = `${Math.round(this.studioZoom * 100)}%`;
+    const zStat = document.getElementById("statusZoom");
+    if (zStat) zStat.innerText = `Zoom: ${Math.round(this.studioZoom * 100)}%`;
+    this.renderStudioCenterPages();
+  }
+
+  addStudioBlankPage() {
+    this.showToast("Blank page inserted into document sequence.");
+  }
+
+  clearStudioAnnotations() {
+    this.clearEditorAnnotations();
+  }
+
+  openWorkflowFileInStudio(slotId) {
+    const file = this.uploadedFilesMap[slotId];
+    if (!file) {
+      alert("Please upload a PDF document first!");
+      return;
+    }
+    this.studioReturnSlotId = slotId;
+    document.getElementById("studioReturnWfBtn").style.display = "inline-flex";
+
+    this.switchTab('pdf_editor');
+    this.loadPdfIntoStudio([file]);
+    this.showToast(`Loaded ${file.name} into PDF Studio for editing!`);
+  }
+
+  async saveAndReturnToWorkflow() {
+    if (!this.studioPdfFile) {
+      alert("No PDF loaded in Studio!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", this.studioPdfFile);
+    formData.append("output_name", `Edited_${this.studioPdfFile.name}`);
+    formData.append("annotations", JSON.stringify(this.editorAnnotations));
+    formData.append("max_kb", "125");
+
+    try {
+      const res = await fetch("/api/edit_pdf_standalone", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const pdfRes = await fetch(data.download_url);
+        const pdfBlob = await pdfRes.blob();
+        const editedFile = new File([pdfBlob], data.filename, { type: "application/pdf" });
+
+        if (this.studioReturnSlotId) {
+          this.uploadedFilesMap[this.studioReturnSlotId] = editedFile;
+          const lbl = document.getElementById(`label_${this.studioReturnSlotId}`);
+          if (lbl) lbl.innerText = `✓ Edited in PDF Studio (${editedFile.name})`;
+          this.checkAndUnlockApplicantForm();
+        }
+
+        document.getElementById("homeView").style.display = "none";
+        document.getElementById("workflowView").style.display = "block";
+        document.getElementById("pdfEditorTab").style.display = "none";
+
+        document.getElementById("navServicesBtn").classList.add("active");
+        document.getElementById("navPdfEditorBtn").classList.remove("active");
+
+        this.showToast("Edited PDF saved and returned to Drug License workflow!");
+      } else {
+        alert("Export Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Save Exception: " + e.message);
+    }
+  }
+
+  async exportStudioPdf() {
+    if (!this.studioPdfFile) {
+      alert("No PDF file loaded!");
+      return;
+    }
+
+    const maxKb = document.getElementById("studioMaxKb")?.value || "125";
+    const formData = new FormData();
+    formData.append("file", this.studioPdfFile);
+    formData.append("output_name", `Edited_${this.studioPdfFile.name}`);
+    formData.append("annotations", JSON.stringify(this.editorAnnotations));
+    formData.append("max_kb", maxKb);
+
+    try {
+      const res = await fetch("/api/edit_pdf_standalone", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`PDF Studio exported successfully (${data.file_size_kb} KB)! Download started.`);
       } else {
         alert("Export Error: " + data.message);
       }
