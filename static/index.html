@@ -27,7 +27,7 @@
         </button>
       </div>
 
-      <div class="user-pill" id="userPillContainer" style="display: flex; align-items: center; gap: 0.5rem;">
+      <div class="user-pill" id="userPillContainer" style="display: none; align-items: center; gap: 0.5rem;">
         <i class="fa-solid fa-circle-user" style="color: var(--accent-green);"></i>
         <span id="loggedInUserLabel" style="font-weight: 700;">Officer</span>
         <button type="button" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-blue);" onclick="docFlowApp.openAddMemberModal()">
@@ -41,7 +41,7 @@
   </nav>
 
   <!-- Main Container -->
-  <main class="main-container" id="mainAppContent">
+  <main class="main-container" id="mainAppContent" style="display: none;">
 
     <!-- SERVICES TAB -->
     <section id="servicesTab">
