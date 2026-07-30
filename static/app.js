@@ -1754,6 +1754,51 @@ class DocFlowApp {
       alert("Generation Exception: " + e.message);
     }
   }
+
+  async generateAppointmentLetter() {
+    const apptDate = document.getElementById("appt_date")?.value || "";
+    const pharmacistName = document.getElementById("appt_pharmacist_name")?.value.trim() || "";
+    const joiningDate = document.getElementById("appt_joining_date")?.value || "";
+    const proprietorName = document.getElementById("appt_proprietor_name")?.value.trim() || "";
+    const accDate = document.getElementById("acc_date")?.value || "";
+    const storeName = document.getElementById("acc_store_name")?.value.trim() || "";
+
+    if (!pharmacistName) {
+      alert("Please enter the Pharmacist Name!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("appointment_date", apptDate);
+    formData.append("pharmacist_name", pharmacistName);
+    formData.append("joining_date", joiningDate);
+    formData.append("proprietor_name", proprietorName);
+    formData.append("acceptance_date", accDate);
+    formData.append("medical_store_name", storeName);
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating formatted Appointment & Acceptance Letter PDF...");
+
+    try {
+      const res = await fetch("/api/fill_appointment_letter", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Appointment & Acceptance Letter generated successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

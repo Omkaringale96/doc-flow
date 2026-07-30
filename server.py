@@ -1755,6 +1755,129 @@ class ApiAutoFillPdfHandler(BaseHandler):
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
+class ApiFillAppointmentAcceptanceHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            files = self.request.files.get("file", [])
+            
+            job_id = uuid.uuid4().hex[:8]
+            job_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_dir, exist_ok=True)
+            
+            template_path = os.path.join(STATIC_DIR, "templates", "appointment_acceptance_letter.pdf")
+            if files:
+                template_path = os.path.join(job_dir, "custom_template.pdf")
+                with open(template_path, "wb") as f_out:
+                    f_out.write(files[0]['body'])
+
+            appointment_date = self.get_body_argument("appointment_date", default="").strip()
+            pharmacist_name = self.get_body_argument("pharmacist_name", default="").strip()
+            joining_date = self.get_body_argument("joining_date", default="").strip()
+            proprietor_name = self.get_body_argument("proprietor_name", default="").strip()
+            acceptance_date = self.get_body_argument("acceptance_date", default="").strip()
+            medical_store_name = self.get_body_argument("medical_store_name", default="").strip()
+
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            doc = fitz.open(template_path)
+            
+            for page_idx, page in enumerate(doc):
+                words = page.get_text("words")
+                lines_map = {}
+                for w in words:
+                    line_no = w[6]
+                    if line_no not in lines_map:
+                        lines_map[line_no] = []
+                    lines_map[line_no].append(w)
+
+                sorted_line_nos = sorted(lines_map.keys())
+
+                for l_idx, l_no in enumerate(sorted_line_nos):
+                    line_words = lines_map[l_no]
+                    for w_i, w in enumerate(line_words):
+                        w_str = w[4]
+                        if '_' in w_str and len(w_str.replace('_', '')) < 3:
+                            x0, y0, x1, y1 = w[0], w[1], w[2], w[3]
+
+                            preceding_words = [w_prev[4] for w_prev in line_words[:w_i]]
+                            preceding_text = " ".join(preceding_words).strip()
+
+                            prev_line_text = ""
+                            if l_idx > 0:
+                                prev_line_no = sorted_line_nos[l_idx - 1]
+                                prev_line_text = " ".join([w_prev[4] for w_prev in lines_map[prev_line_no]]).strip()
+
+                            full_ctx = f"{prev_line_text} {preceding_text}".strip().lower()
+
+                            # Exclude signature lines completely
+                            if any(sig in full_ctx for sig in ["sincerely", "best regards", "regards,", "signature"]):
+                                continue
+
+                            val_to_fill = ""
+
+                            if "appointment letter" in full_ctx or (l_idx < 15 and "date" in full_ctx):
+                                if "date" in full_ctx:
+                                    val_to_fill = appointment_date
+                            
+                            if "acceptance letter" in full_ctx or (l_idx >= 15 and "date" in full_ctx):
+                                if "date" in full_ctx:
+                                    val_to_fill = acceptance_date
+
+                            if "dear" in full_ctx or "i," in full_ctx:
+                                val_to_fill = pharmacist_name
+                            
+                            if "effective from" in full_ctx or "joining" in full_ctx:
+                                val_to_fill = joining_date
+                            
+                            if "with best regards" in full_ctx or "proprietor" in full_ctx:
+                                if "regards" in full_ctx:
+                                    val_to_fill = proprietor_name
+                                else:
+                                    val_to_fill = medical_store_name
+
+                            if "at" in full_ctx and "pharmacist" in full_ctx:
+                                val_to_fill = medical_store_name
+
+                            if val_to_fill:
+                                rect = fitz.Rect(x0, y0, x1, y1)
+                                padded = fitz.Rect(rect.x0 - 1, rect.y0 - 2, rect.x1 + 1, rect.y1 + 2)
+                                page.draw_rect(padded, color=(1,1,1), fill=(1,1,1))
+
+                                avail_width = rect.width
+                                fontsize = 11
+                                estimated_width = len(val_to_fill) * 6.0
+                                if estimated_width > avail_width and avail_width > 20:
+                                    fontsize = max(8, int(11 * (avail_width / estimated_width)))
+
+                                page.insert_text(fitz.Point(rect.x0 + 2, rect.y1 - 2), val_to_fill, fontsize=fontsize, fontname="helv", color=(0.06, 0.09, 0.16))
+
+            out_raw = os.path.join(job_dir, "raw_filled.pdf")
+            doc.save(out_raw)
+            doc.close()
+
+            final_out = os.path.join(job_dir, "Appointment_Acceptance_Letter.pdf")
+            process_pdf_document([out_raw], final_out, max_kb=max_kb)
+
+            if os.path.exists(out_raw):
+                os.remove(out_raw)
+
+            size_kb = os.path.getsize(final_out) / 1024.0
+            print(f"✅ Dedicated Appointment & Acceptance Letter filled: {final_out} ({size_kb:.1f} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "Appointment & Acceptance Letter generated successfully!",
+                "filename": "Appointment_Acceptance_Letter.pdf",
+                "file_size_kb": round(size_kb, 1),
+                "download_url": f"/outputs/{job_id}/Appointment_Acceptance_Letter.pdf"
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
@@ -1773,6 +1896,7 @@ def make_app():
         (r"/api/merge_pdfs", ApiMergePdfsHandler),
         (r"/api/detect_pdf_blanks", ApiDetectPdfBlanksHandler),
         (r"/api/autofill_pdf", ApiAutoFillPdfHandler),
+        (r"/api/fill_appointment_letter", ApiFillAppointmentAcceptanceHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)
