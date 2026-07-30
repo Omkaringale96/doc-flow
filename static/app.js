@@ -233,17 +233,24 @@ class DocFlowApp {
 
   switchTab(tab) {
     const sTab = document.getElementById("servicesTab");
+    const aTab = document.getElementById("apptAccTab");
     const pTab = document.getElementById("pdfEditorTab");
 
     const sBtn = document.getElementById("navServicesBtn");
+    const aBtn = document.getElementById("navApptAccBtn");
     const pBtn = document.getElementById("navPdfEditorBtn");
 
     if (sTab) sTab.style.display = tab === "services" ? "block" : "none";
+    if (aTab) aTab.style.display = tab === "appt_acc" ? "block" : "none";
     if (pTab) pTab.style.display = tab === "pdf_editor" ? "block" : "none";
 
     if (sBtn) {
       if (tab === "services") sBtn.classList.add("active");
       else sBtn.classList.remove("active");
+    }
+    if (aBtn) {
+      if (tab === "appt_acc") aBtn.classList.add("active");
+      else aBtn.classList.remove("active");
     }
     if (pBtn) {
       if (tab === "pdf_editor") pBtn.classList.add("active");
@@ -1797,6 +1804,148 @@ class DocFlowApp {
 
         this.showToast(`Auto-filled PDF created successfully (${data.file_size_kb} KB)! Download started.`);
       } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
+
+  async generateAppointmentLetter() {
+    const apptDate = document.getElementById("appt_date")?.value || "";
+    const pharmacistName = document.getElementById("appt_pharmacist_name")?.value.trim() || "";
+    const joiningDate = document.getElementById("appt_joining_date")?.value || "";
+    const proprietorName = document.getElementById("appt_proprietor_name")?.value.trim() || "";
+    const accDate = document.getElementById("acc_date")?.value || "";
+    const storeName = document.getElementById("acc_store_name")?.value.trim() || "";
+
+    if (!pharmacistName) {
+      alert("Please enter the Pharmacist Name!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("appointment_date", apptDate);
+    formData.append("pharmacist_name", pharmacistName);
+    formData.append("joining_date", joiningDate);
+    formData.append("proprietor_name", proprietorName);
+    formData.append("acceptance_date", accDate);
+    formData.append("medical_store_name", storeName);
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating formatted Appointment & Acceptance Letter PDF...");
+
+    try {
+      const res = await fetch("/api/fill_appointment_letter", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Appointment & Acceptance Letter generated successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
+
+  async generateSelfDeclaration() {
+    const pharmacistName = document.getElementById("sd_pharmacist_name")?.value.trim() || "";
+    const regNo = document.getElementById("sd_reg_no")?.value.trim() || "";
+    const address = document.getElementById("sd_address")?.value.trim() || "";
+    const storeName = document.getElementById("sd_store_name")?.value.trim() || "";
+    const dateStr = document.getElementById("sd_date")?.value || "";
+
+    if (!pharmacistName) {
+      alert("Please enter the Pharmacist Name for Self Declaration!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("pharmacist_name", pharmacistName);
+    formData.append("reg_no", regNo);
+    formData.append("address", address);
+    formData.append("store_name", storeName);
+    formData.append("date_str", dateStr);
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating Self Declaration (SD) PDF...");
+
+    try {
+      const res = await fetch("/api/generate_self_declaration", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Self Declaration (SD) generated successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
+
+  async generateCombinedPdf() {
+    const pharmacistName = document.getElementById("comb_pharmacist_name")?.value.trim() || "";
+    const apptDate = document.getElementById("comb_appt_date")?.value || "";
+    const accDate = document.getElementById("comb_acc_date")?.value || "";
+    const joiningDate = document.getElementById("comb_joining_date")?.value || "";
+    const proprietorName = document.getElementById("comb_proprietor_name")?.value.trim() || "";
+    const storeName = document.getElementById("comb_store_name")?.value.trim() || "";
+    const regNo = document.getElementById("comb_reg_no")?.value.trim() || "";
+    const address = document.getElementById("comb_address")?.value.trim() || "";
+
+    if (!pharmacistName) {
+      alert("Please enter the Pharmacist Name!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("appointment_date", apptDate);
+    formData.append("pharmacist_name", pharmacistName);
+    formData.append("joining_date", joiningDate);
+    formData.append("proprietor_name", proprietorName);
+    formData.append("acceptance_date", accDate);
+    formData.append("medical_store_name", storeName);
+    formData.append("reg_no", regNo);
+    formData.append("address", address);
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating Combined Appointment + Acceptance + Self Declaration PDF...");
+
+    try {
+      const res = await fetch("/api/generate_combined_appointment_acceptance_sd", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Combined PDF generated successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
   }
 }
 
