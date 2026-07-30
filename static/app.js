@@ -1898,6 +1898,55 @@ class DocFlowApp {
       alert("Generation Exception: " + e.message);
     }
   }
+
+  async generateCombinedPdf() {
+    const pharmacistName = document.getElementById("comb_pharmacist_name")?.value.trim() || "";
+    const apptDate = document.getElementById("comb_appt_date")?.value || "";
+    const accDate = document.getElementById("comb_acc_date")?.value || "";
+    const joiningDate = document.getElementById("comb_joining_date")?.value || "";
+    const proprietorName = document.getElementById("comb_proprietor_name")?.value.trim() || "";
+    const storeName = document.getElementById("comb_store_name")?.value.trim() || "";
+    const regNo = document.getElementById("comb_reg_no")?.value.trim() || "";
+    const address = document.getElementById("comb_address")?.value.trim() || "";
+
+    if (!pharmacistName) {
+      alert("Please enter the Pharmacist Name!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("appointment_date", apptDate);
+    formData.append("pharmacist_name", pharmacistName);
+    formData.append("joining_date", joiningDate);
+    formData.append("proprietor_name", proprietorName);
+    formData.append("acceptance_date", accDate);
+    formData.append("medical_store_name", storeName);
+    formData.append("reg_no", regNo);
+    formData.append("address", address);
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating Combined Appointment + Acceptance + Self Declaration PDF...");
+
+    try {
+      const res = await fetch("/api/generate_combined_appointment_acceptance_sd", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Combined PDF generated successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

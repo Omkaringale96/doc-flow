@@ -570,17 +570,24 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
 
         try:
             if path.lower().endswith('.pdf'):
-                # Extract pages or convert via PyPDF
                 try:
-                    reader = pypdf.PdfReader(path)
-                    for page in reader.pages:
-                        for img_obj in page.images:
-                            pil_img = Image.open(BytesIO(img_obj.data)).convert("RGB")
-                            images.append(pil_img)
+                    doc = fitz.open(path)
+                    for page in doc:
+                        pix = page.get_pixmap(dpi=150)
+                        pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        images.append(pil_img)
+                    doc.close()
                 except Exception as pdf_err:
                     print(f"⚠️ PDF extraction fallback for {path}: {pdf_err}", flush=True)
-                    blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
-                    images.append(blank)
+                    try:
+                        reader = pypdf.PdfReader(path)
+                        for page in reader.pages:
+                            for img_obj in page.images:
+                                pil_img = Image.open(BytesIO(img_obj.data)).convert("RGB")
+                                images.append(pil_img)
+                    except Exception:
+                        blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
+                        images.append(blank)
             else:
                 pil = Image.open(path).convert("RGB")
                 try:
@@ -1994,6 +2001,139 @@ PLACE : ____________________
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
+class ApiGenerateCombinedAppointmentAcceptanceSdHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            job_id = uuid.uuid4().hex[:8]
+            job_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_dir, exist_ok=True)
+
+            appointment_date = self.get_body_argument("appointment_date", default="").strip()
+            pharmacist_name = self.get_body_argument("pharmacist_name", default="").strip()
+            joining_date = self.get_body_argument("joining_date", default="").strip()
+            proprietor_name = self.get_body_argument("proprietor_name", default="").strip()
+            acceptance_date = self.get_body_argument("acceptance_date", default="").strip()
+            medical_store_name = self.get_body_argument("medical_store_name", default="").strip()
+            reg_no = self.get_body_argument("reg_no", default="").strip()
+            address = self.get_body_argument("address", default="").strip()
+
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            template_path = os.path.join(STATIC_DIR, "templates", "appointment_acceptance_letter.pdf")
+
+            # 1. Page 1: Appointment & Acceptance Letter
+            doc1 = fitz.open(template_path)
+            page1 = doc1[0]
+            words = page1.get_text("words")
+            words = sorted(words, key=lambda w: (round(w[1] / 10) * 10, w[0]))
+
+            for w in words:
+                w_str = w[4]
+                if '_' in w_str:
+                    x0, y0, x1, y1 = w[0], w[1], w[2], w[3]
+                    val_to_fill = ""
+
+                    if y0 < 120:
+                        val_to_fill = appointment_date
+                    elif 130 <= y0 < 170:
+                        val_to_fill = medical_store_name
+                    elif 190 <= y0 < 225:
+                        val_to_fill = pharmacist_name
+                    elif 230 <= y0 < 265:
+                        val_to_fill = joining_date
+                    elif 360 <= y0 < 430:
+                        continue
+                    elif 470 <= y0 < 510:
+                        val_to_fill = acceptance_date
+                    elif 540 <= y0 < 580:
+                        val_to_fill = medical_store_name
+                    elif 620 <= y0 < 645:
+                        val_to_fill = pharmacist_name
+                    elif 645 <= y0 < 680:
+                        if x0 < 300:
+                            val_to_fill = medical_store_name
+                        else:
+                            val_to_fill = joining_date
+                    elif y0 >= 680:
+                        continue
+
+                    if val_to_fill:
+                        rect = fitz.Rect(x0, y0, x1, y1)
+                        padded = fitz.Rect(rect.x0 - 1, rect.y0 - 2, rect.x1 + 1, rect.y1 + 2)
+                        page1.draw_rect(padded, color=(1,1,1), fill=(1,1,1))
+
+                        avail_width = rect.width
+                        fontsize = 11
+                        estimated_width = len(val_to_fill) * 6.0
+                        if estimated_width > avail_width and avail_width > 20:
+                            fontsize = max(8, int(11 * (avail_width / estimated_width)))
+
+                        page1.insert_text(fitz.Point(rect.x0 + 2, rect.y1 - 2), val_to_fill, fontsize=fontsize, fontname="helv", color=(0.06, 0.09, 0.16))
+
+            # 2. Page 2: Self Declaration (SD)
+            doc2 = fitz.open()
+            page2 = doc2.new_page(width=595, height=842)
+            page2.insert_text(fitz.Point(200, 60), "SELF DECLARATION", fontsize=16, fontname="helv", color=(0,0,0))
+
+            text_body = f"""
+I, {pharmacist_name}, residing at {address}, hereby solemnly declare that:
+
+1. I am a Registered Pharmacist under the Maharashtra State Pharmacy Council (MSPC) bearing Registration No. {reg_no}.
+
+2. I am currently appointed as a Registered Pharmacist at {medical_store_name}.
+
+3. I am personally responsible for dispensing medicines, maintaining drug records, and ensuring full compliance with the Drugs and Cosmetics Act, 1940 and Rules thereunder.
+
+4. The information provided above is true and correct to the best of my knowledge and belief.
+
+DATE : {appointment_date}
+PLACE : ____________________
+
+
+                                              ___________________________________
+                                              Signature of Registered Pharmacist
+                                              ({pharmacist_name})
+"""
+
+            rect2 = fitz.Rect(50, 100, 545, 750)
+            page2.insert_textbox(rect2, text_body, fontsize=11, fontname="helv", color=(0,0,0), align=0)
+
+            # Merge Page 1 + Page 2 into single PDF
+            combined_doc = fitz.open()
+            combined_doc.insert_pdf(doc1)
+            combined_doc.insert_pdf(doc2)
+
+            out_raw = os.path.join(job_dir, "raw_combined.pdf")
+            combined_doc.save(out_raw)
+            combined_doc.close()
+            doc1.close()
+            doc2.close()
+
+            final_out = os.path.join(job_dir, "Appointment_Acceptance_SelfDeclaration.pdf")
+            process_pdf_document([out_raw], final_out, max_kb=max_kb)
+
+            if os.path.exists(out_raw):
+                os.remove(out_raw)
+
+            size_kb = os.path.getsize(final_out) / 1024.0
+            print(f"✅ Combined Appointment + Acceptance + Self Declaration generated: {final_out} ({size_kb:.1f} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "Combined Appointment, Acceptance & Self Declaration generated successfully!",
+                "filename": "Appointment_Acceptance_SelfDeclaration.pdf",
+                "file_size_kb": round(size_kb, 1),
+                "download_url": f"/outputs/{job_id}/Appointment_Acceptance_SelfDeclaration.pdf"
+            })
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -2012,6 +2152,7 @@ def make_app():
         (r"/api/autofill_pdf", ApiAutoFillPdfHandler),
         (r"/api/fill_appointment_letter", ApiFillAppointmentAcceptanceHandler),
         (r"/api/generate_self_declaration", ApiGenerateSelfDeclarationHandler),
+        (r"/api/generate_combined_appointment_acceptance_sd", ApiGenerateCombinedAppointmentAcceptanceSdHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)

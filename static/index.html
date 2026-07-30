@@ -225,127 +225,92 @@
       </div>
     </section>
 
-    <!-- PHARMACIST APPOINTMENT & ACCEPTANCE TAB (2 SECTIONS: 1. APPOINTMENT & ACCEPTANCE, 2. SELF DECLARATION SD) -->
+    <!-- PHARMACIST APPOINTMENT, ACCEPTANCE & SELF DECLARATION SUITE (COMBINED SINGLE PDF) -->
     <section id="apptAccTab" style="display: none;">
       <div class="hero-header" style="margin-bottom: 1.5rem;">
-        <h1>Pharmacist Appointment & Acceptance Suite</h1>
-        <p>Generate formatted Appointment & Acceptance letters, or prepare Self Declaration (SD) documents under specified file limits.</p>
+        <h1>Pharmacist Document Suite (Appointment + Acceptance + Self Declaration)</h1>
+        <p>Generate a single, combined PDF containing the Appointment Letter, Acceptance Letter, and Self Declaration (SD) under 125 KB.</p>
       </div>
 
-      <!-- SECTION 1: APPOINTMENT & ACCEPTANCE LETTER -->
-      <div id="section1ApptAcc" class="doc-card" style="max-width: 900px; margin: 0 auto 2rem auto; border-color: var(--accent-blue);">
-        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
-          <i class="fa-solid fa-file-contract"></i> Section 1: Appointment & Acceptance Letter Generator
+      <!-- UNIFIED COMBINED GENERATOR CARD -->
+      <div class="doc-card" style="max-width: 920px; margin: 0 auto; border-color: var(--accent-purple);">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+          <i class="fa-solid fa-file-contract"></i> Combined Appointment Letter + Acceptance Letter + Self Declaration (SD)
         </h3>
-        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-          Fill details below to generate the formatted, compressed <strong>Appointment & Acceptance Letter PDF</strong> (&lt; 125 KB). Signature lines remain 100% blank.
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+          Enter applicant and store details once below to generate a <strong>single unified PDF document</strong> (Page 1: Appointment & Acceptance Letter, Page 2: Self Declaration SD) compressed under <strong>125 KB</strong>.
         </p>
 
-        <form id="appointmentLetterForm" onsubmit="event.preventDefault(); docFlowApp.generateAppointmentLetter();">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 1.2rem;">
+        <form id="combinedPdfForm" onsubmit="event.preventDefault(); docFlowApp.generateCombinedPdf();">
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
             
-            <!-- APPOINTMENT LETTER DETAILS -->
-            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
-                <i class="fa-solid fa-file-signature"></i> Appointment Details
+            <!-- APPOINTMENT & ACCEPTANCE DETAILS -->
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-glass);">
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.4rem;">
+                <i class="fa-solid fa-file-signature"></i> 1. Appointment & Acceptance Details
               </h4>
-              
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Appointment Date</label>
-                <input type="date" id="appt_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Pharmacist Full Name</label>
+                <input type="text" id="comb_pharmacist_name" class="form-control" placeholder="e.g. Vinayak Ramesh Patil" required style="font-size: 0.85rem; width: 100%;">
               </div>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Pharmacist Full Name</label>
-                <input type="text" id="appt_pharmacist_name" class="form-control" placeholder="e.g. Vinayak Ramesh Patil" style="font-size: 0.85rem; width: 100%;">
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Appointment Date</label>
+                <input type="date" id="comb_appt_date" class="form-control" required style="font-size: 0.85rem; width: 100%;">
               </div>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Joining Date / Effective From</label>
-                <input type="date" id="appt_joining_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Acceptance Date</label>
+                <input type="date" id="comb_acc_date" class="form-control" required style="font-size: 0.85rem; width: 100%;">
               </div>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Proprietor Full Name</label>
-                <input type="text" id="appt_proprietor_name" class="form-control" placeholder="Proprietor Name" style="font-size: 0.85rem; width: 100%;">
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Joining Date / Effective From</label>
+                <input type="date" id="comb_joining_date" class="form-control" required style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Proprietor Full Name</label>
+                <input type="text" id="comb_proprietor_name" class="form-control" placeholder="e.g. Datta Patil" required style="font-size: 0.85rem; width: 100%;">
               </div>
             </div>
 
-            <!-- ACCEPTANCE LETTER DETAILS -->
-            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-green); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
-                <i class="fa-solid fa-circle-check"></i> Acceptance Details
+            <!-- STORE & SELF DECLARATION DETAILS -->
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-glass);">
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.4rem;">
+                <i class="fa-solid fa-file-shield"></i> 2. Store & Self Declaration (SD) Details
               </h4>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Acceptance Date</label>
-                <input type="date" id="acc_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Medical Store Name & Address</label>
+                <input type="text" id="comb_store_name" class="form-control" placeholder="e.g. Krishna Generic Medical and General Stores" required style="font-size: 0.85rem; width: 100%;">
               </div>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Medical Store Name & Address</label>
-                <input type="text" id="acc_store_name" class="form-control" placeholder="e.g. Krishna Generic Medical and General Stores" style="font-size: 0.85rem; width: 100%;">
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">MSPC Registration Number</label>
+                <input type="text" id="comb_reg_no" class="form-control" placeholder="e.g. 123456" required style="font-size: 0.85rem; width: 100%;">
               </div>
 
-              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); border-radius: 8px; padding: 0.8rem; margin-top: 1rem; font-size: 0.75rem; color: var(--text-bright);">
-                <i class="fa-solid fa-shield-halved" style="color: var(--accent-green);"></i> <strong>Notice:</strong> Pharmacist Name automatically syncs across both letters. Output size target: &lt; 125 KB.
+              <div class="form-group" style="margin-bottom: 0.8rem;">
+                <label style="font-size: 0.8rem; font-weight: 600;">Pharmacist Residential Address</label>
+                <input type="text" id="comb_address" class="form-control" placeholder="Full Residential Address" required style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid var(--accent-purple); border-radius: 8px; padding: 0.9rem; margin-top: 1.2rem; font-size: 0.78rem; color: var(--text-bright);">
+                <i class="fa-solid fa-layer-group" style="color: var(--accent-purple);"></i> <strong>Single Combined Output:</strong> Generates 1 combined PDF containing Appointment Letter + Acceptance Letter + Self Declaration (SD) (&lt; 125 KB).
               </div>
             </div>
 
           </div>
 
           <div style="display: flex; justify-content: flex-end;">
-            <button type="submit" class="btn-primary" style="padding: 0.65rem 1.8rem; font-size: 0.92rem; background: var(--accent-blue);">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Section 1: Appointment & Acceptance Letter (PDF)
+            <button type="submit" class="btn-primary" style="padding: 0.75rem 2.2rem; font-size: 1rem; background: var(--accent-purple);">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Combined Appointment + Acceptance + Self Declaration PDF
             </button>
           </div>
-        </form>
-      </div>
 
-      <!-- SECTION 2: SELF DECLARATION (SD) -->
-      <div id="section2SelfDeclaration" class="doc-card" style="max-width: 900px; margin: 0 auto; border-color: var(--accent-purple);">
-        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
-          <i class="fa-solid fa-file-shield"></i> Section 2: Self Declaration (SD) Suite
-        </h3>
-        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-          Generate a formatted <strong>Self Declaration (SD) PDF</strong> under 125 KB.
-        </p>
-
-        <form id="selfDeclarationForm" onsubmit="event.preventDefault(); docFlowApp.generateSelfDeclaration();">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.2rem;">
-            
-            <div class="form-group">
-              <label style="font-size: 0.78rem;">Pharmacist Name</label>
-              <input type="text" id="sd_pharmacist_name" class="form-control" placeholder="Full Pharmacist Name" style="font-size: 0.85rem; width: 100%;">
-            </div>
-
-            <div class="form-group">
-              <label style="font-size: 0.78rem;">MSPC Registration Number</label>
-              <input type="text" id="sd_reg_no" class="form-control" placeholder="e.g. 123456" style="font-size: 0.85rem; width: 100%;">
-            </div>
-
-            <div class="form-group">
-              <label style="font-size: 0.78rem;">Residential Address</label>
-              <input type="text" id="sd_address" class="form-control" placeholder="Full Address" style="font-size: 0.85rem; width: 100%;">
-            </div>
-
-            <div class="form-group">
-              <label style="font-size: 0.78rem;">Medical Store Name</label>
-              <input type="text" id="sd_store_name" class="form-control" placeholder="Store Name" style="font-size: 0.85rem; width: 100%;">
-            </div>
-
-            <div class="form-group">
-              <label style="font-size: 0.78rem;">Declaration Date</label>
-              <input type="date" id="sd_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
-            </div>
-
-          </div>
-
-          <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
-            <button type="submit" class="btn-primary" style="padding: 0.65rem 1.8rem; font-size: 0.92rem; background: var(--accent-purple);">
-              <i class="fa-solid fa-file-shield"></i> Generate Section 2: Self Declaration SD (PDF)
-            </button>
-          </div>
         </form>
       </div>
     </section>
