@@ -2036,6 +2036,45 @@ class DocFlowApp {
     this.copyTextToClipboard(fullText);
     this.showToast("Copied all applicant credentials to clipboard!");
   }
+
+  openHistoryModal() {
+    document.getElementById("historyModal").style.display = "flex";
+    this.loadHistoryData();
+  }
+
+  closeHistoryModal() {
+    document.getElementById("historyModal").style.display = "none";
+  }
+
+  async loadHistoryData() {
+    const tbody = document.getElementById("historyTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading Firebase & Local Submission History...</td></tr>`;
+
+    try {
+      const res = await fetch("/api/submissions");
+      const data = await res.json();
+
+      if (data.status === "success" && data.submissions && data.submissions.length > 0) {
+        tbody.innerHTML = data.submissions.map(item => `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 0.65rem 0.75rem; color: var(--text-muted); font-size: 0.78rem;">${item.date || item.created_at || '-'}</td>
+            <td style="padding: 0.65rem 0.75rem; font-weight: 600; color: var(--accent-blue);">${item.workflow || 'New Proprietory Firm'}</td>
+            <td style="padding: 0.65rem 0.75rem; font-weight: 700; color: var(--text-bright);">${item.name || '-'}</td>
+            <td style="padding: 0.65rem 0.75rem; color: var(--accent-purple);">${item.reg_number || '-'}</td>
+            <td style="padding: 0.65rem 0.75rem; color: var(--accent-green);">${item.folder || '-'} (${item.zip_size_kb || 0} KB)</td>
+            <td style="padding: 0.65rem 0.75rem;">
+              ${item.cloudinary_zip_url ? `<a href="${item.cloudinary_zip_url}" target="_blank" style="color: var(--accent-green); text-decoration: none;"><i class="fa-solid fa-cloud-arrow-down"></i> Cloudinary Link</a>` : '<span style="color: var(--text-muted);">Local ZIP Package</span>'}
+            </td>
+          </tr>
+        `).join("");
+      } else {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No submission records found yet. Submit a document package to record history!</td></tr>`;
+      }
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding: 1.5rem; text-align: center; color: #ef4444;">Error loading history: ${e.message}</td></tr>`;
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

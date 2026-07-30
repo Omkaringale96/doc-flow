@@ -396,6 +396,11 @@ def upload_to_cloudinary(file_path, folder="DocFlow"):
         return None
 
     try:
+        config = cloudinary.config()
+        if not getattr(config, "api_key", None) or not getattr(config, "cloud_name", None):
+            print("ℹ️ [CLOUDINARY] Credentials not configured. Skipping Cloudinary upload.", flush=True)
+            return None
+
         print(f"⏳ [CLOUDINARY] Uploading {file_path} to folder '{folder}'...", flush=True)
         result = cloudinary.uploader.upload(
             file_path,
@@ -406,8 +411,7 @@ def upload_to_cloudinary(file_path, folder="DocFlow"):
         print(f"☁ [CLOUDINARY SUCCESS] Uploaded: {url}", flush=True)
         return url
     except Exception as e:
-        print(f"⚠️ [CLOUDINARY ERROR] Upload failed: {e}", flush=True)
-        traceback.print_exc()
+        print(f"⚠️ [CLOUDINARY NOTE] Upload skipped: {e}", flush=True)
         return None
 
 # ----------------------------------------------------------------------
@@ -2140,6 +2144,48 @@ PLACE : ____________________
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
+class ApiSubmissionsHistoryHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            workflow_filter = self.get_argument("workflow", default="").strip()
+            history = []
+
+            if db is not None:
+                try:
+                    docs = db.collection("submissions").limit(100).stream()
+                    for d in docs:
+                        item = d.to_dict()
+                        if "created_at" in item and hasattr(item["created_at"], "isoformat"):
+                            item["created_at"] = item["created_at"].isoformat()
+                        history.append(item)
+                    print(f"✅ Fetched {len(history)} submission records from Firebase Firestore.", flush=True)
+                except Exception as e:
+                    print(f"⚠️ Firestore query note: {e}", flush=True)
+
+            if not history and os.path.exists(LOG_FILE):
+                try:
+                    with open(LOG_FILE, "r", encoding="utf-8") as f:
+                        history = json.load(f)
+                    history.reverse()
+                except Exception:
+                    history = []
+
+            if workflow_filter:
+                history = [h for h in history if workflow_filter.lower() in str(h.get("workflow", "")).lower()]
+
+            self.write({
+                "status": "success",
+                "submissions": history,
+                "count": len(history)
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -2148,6 +2194,7 @@ def make_app():
         (r"/api/remove_user", ApiRemoveUserHandler),
         (r"/api/check_auth", ApiCheckAuthHandler),
         (r"/api/workflows", ApiWorkflowsHandler),
+        (r"/api/submissions", ApiSubmissionsHistoryHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),
