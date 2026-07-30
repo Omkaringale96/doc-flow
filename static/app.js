@@ -1934,6 +1934,27 @@ class DocFlowApp {
       alert("Generation Exception: " + e.message);
     }
   }
+
+  redirectToSejdaEditor() {
+    this.switchTab('pdf_editor');
+    this.switchPdfSubTab('sejda');
+    this.showToast("Switched to Sejda PDF Editor Suite!");
+  }
+
+  copyAllCredentials() {
+    const name = document.getElementById("resApplicantName")?.innerText || "";
+    const loginId = document.getElementById("resLoginId")?.innerText || "";
+    const pass = document.getElementById("resMspcPass")?.innerText || "";
+    const regNo = document.getElementById("resRegNo")?.innerText || "";
+    const dob = document.getElementById("resDob")?.innerText || "";
+    const mobile = document.getElementById("resMobile")?.innerText || "";
+    const email = document.getElementById("resEmail")?.innerText || "";
+
+    const fullText = `Applicant Name       : ${name}\nMSPC Login ID         : ${loginId}\nCalculated Password : ${pass}\nPharmacy Reg Number  : ${regNo}\nDate of Birth        : ${dob}\nMobile Number        : ${mobile}\nEmail Address        : ${email}`;
+
+    this.copyTextToClipboard(fullText);
+    this.showToast("Copied all applicant credentials to clipboard!");
+  }
 }
 
 const docFlowApp = new DocFlowApp();

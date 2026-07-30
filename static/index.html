@@ -181,21 +181,81 @@
             </a>
           </div>
 
-          <!-- MSPC Credentials & Details Card -->
-          <div style="background: var(--bg-card); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid var(--border-glass);">
-            <h4 style="font-size: 1rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.8rem;">
-              <i class="fa-solid fa-key"></i> MSPC Portal Login Credentials
-            </h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; font-size: 0.88rem;">
-              <div><strong>Applicant Name:</strong> <span id="resApplicantName"></span></div>
-              <div><strong>Login ID:</strong> <span id="resLoginId"></span></div>
-              <div><strong>Calculated Password:</strong> <span id="resMspcPass" style="color: var(--accent-green); font-weight: 700;"></span></div>
-              <div><strong>Reg Number:</strong> <span id="resRegNo"></span></div>
-              <div><strong>Date of Birth:</strong> <span id="resDob"></span></div>
-              <div><strong>Mobile:</strong> <span id="resMobile"></span></div>
-              <div><strong>Email:</strong> <span id="resEmail"></span></div>
-              <div><strong>Generated Date:</strong> <span id="resGenDate"></span></div>
+          <!-- Copy-Paste Credentials Assistant Panel -->
+          <div style="background: var(--bg-card); border-radius: 12px; padding: 1.4rem; margin-bottom: 1.5rem; border: 1px solid var(--accent-purple);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--accent-purple); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-copy"></i> Copy-Paste Assistant & MSPC Credentials
+              </h4>
+              <button class="btn-primary" style="font-size: 0.8rem; padding: 0.35rem 0.9rem; background: var(--accent-purple);" onclick="docFlowApp.copyAllCredentials()">
+                <i class="fa-solid fa-clipboard"></i> Copy All Credentials
+              </button>
             </div>
+
+            <!-- Individual Copy Fields Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.8rem; font-size: 0.85rem; margin-bottom: 1.2rem;">
+              
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Applicant Name</span>
+                  <strong id="resApplicantName" style="color: var(--text-bright);">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resApplicantName').innerText)">Copy</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">MSPC Login ID</span>
+                  <strong id="resLoginId" style="color: var(--text-bright);">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resLoginId').innerText)">Copy</button>
+              </div>
+
+              <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid var(--accent-green); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--accent-green); font-weight: 700;">Calculated Password</span>
+                  <strong id="resMspcPass" style="color: var(--accent-green); font-size: 0.95rem;">-</strong>
+                </div>
+                <button class="btn-primary" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; background: var(--accent-green);" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resMspcPass').innerText)">Copy Pass</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Reg Number</span>
+                  <strong id="resRegNo" style="color: var(--text-bright);">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resRegNo').innerText)">Copy</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Date of Birth</span>
+                  <strong id="resDob" style="color: var(--text-bright);">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resDob').innerText)">Copy</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Mobile / Email</span>
+                  <strong id="resMobile" style="color: var(--text-bright); font-size: 0.8rem;">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resMobile').innerText)">Copy</button>
+              </div>
+
+            </div>
+
+            <!-- Seamless 2-Step Action Redirect Buttons -->
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+              <button class="btn-primary" style="flex: 1; min-width: 220px; font-size: 0.92rem; background: var(--accent-purple); padding: 0.7rem;" onclick="docFlowApp.redirectToSejdaEditor()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Step 2: Edit/Merge in Sejda Editor
+              </button>
+
+              <a href="https://online.mspcindia.org/" target="_blank" class="btn-primary" style="flex: 1; min-width: 220px; text-align: center; text-decoration: none; font-size: 0.92rem; background: var(--accent-green); padding: 0.7rem;">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Step 3: Open MSPC Portal & Login
+              </a>
+            </div>
+
           </div>
 
           <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--text-bright);">Processed Files Summary</h4>
