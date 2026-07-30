@@ -30,3 +30,13 @@ scratch/
 # Logs & Environment
 submissions_log.json
 .env
+# Firebase
+firebase_config.py
+*-firebase-adminsdk*.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env

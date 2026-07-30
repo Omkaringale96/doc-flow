@@ -20,8 +20,14 @@ import base64
 import shutil
 import zipfile
 import traceback
-from io import BytesIO
+from firebase_config import db
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+import cloudinary_config
 from datetime import datetime
+from io import BytesIO
 
 import cv2
 import numpy as np
@@ -177,18 +183,64 @@ def generate_mspc_password(name: str, dob_str: str) -> str:
 
     return f"{prefix}{day_str}{month_str}"
 
+# --------------------------------------------------------
+# Logging Functions
+# --------------------------------------------------------
+
+LOG_FILE = "submissions_log.json"
+
 
 def log_submission(entry):
+    """
+    Save submission locally and to Firestore.
+    """
+
+    # Save to Firestore
+    try:
+        db.collection("submissions").add({
+            **entry,
+            "created_at": datetime.utcnow()
+        })
+        print("✅ Saved to Firestore")
+
+    except Exception as e:
+        print("❌ Firestore Error:", e)
+
+    # Save locally
     submissions = []
+
     if os.path.exists(LOG_FILE):
         try:
             with open(LOG_FILE, "r", encoding="utf-8") as f:
                 submissions = json.load(f)
         except Exception:
             submissions = []
+
     submissions.append(entry)
+
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(submissions, f, indent=2)
+
+
+def upload_to_cloudinary(file_path, folder="DocFlow"):
+    """
+    Upload a file to Cloudinary and return its secure URL.
+    """
+
+    try:
+        result = cloudinary.uploader.upload(
+            file_path,
+            resource_type="auto",
+            folder=folder
+        )
+
+        print(f"☁ Uploaded: {result['secure_url']}")
+
+        return result["secure_url"]
+
+    except Exception as e:
+        print("❌ Cloudinary Upload Error:", e)
+        return None
 
 # ----------------------------------------------------------------------
 # Image Deblur & Transformation Utilities
@@ -795,6 +847,17 @@ Generated Date        : {current_date_str}
             zip_size_kb = round(os.path.getsize(zip_path) / 1024.0, 1)
             zip_download_url = f"/outputs/{job_id}/{zip_filename}"
 
+            # ----------------------------------------
+            # Upload generated ZIP to Cloudinary
+            # ----------------------------------------
+
+            cloudinary_zip_url = upload_to_cloudinary(
+                zip_path,
+                folder=f"DocFlow/{folder_name}"
+            )
+
+            print("ZIP Cloudinary URL:", cloudinary_zip_url)
+
             log_submission({
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "name": applicant_name,
@@ -802,11 +865,13 @@ Generated Date        : {current_date_str}
                 "login_id": login_id,
                 "dob": dob,
                 "mspc_password": mspc_password,
-                "workflow": workflow['title'],
+                "workflow": workflow["title"],
                 "email": email,
                 "mobile": mobile,
                 "folder": folder_name,
-                "files_count": len(processed_files_summary)
+                "files_count": len(processed_files_summary),
+                "zip_size_kb": zip_size_kb,
+                "cloudinary_zip_url": cloudinary_zip_url
             })
 
             self.write({
@@ -815,6 +880,7 @@ Generated Date        : {current_date_str}
                 "folder_name": folder_name,
                 "job_id": job_id,
                 "zip_download_url": zip_download_url,
+                "cloudinary_zip_url": cloudinary_zip_url,
                 "zip_filename": zip_filename,
                 "zip_size_kb": zip_size_kb,
                 "mspc_credentials": {
