@@ -6,11 +6,12 @@ DocFlow Pro - Production Web Server Engine with Member Authorization
 ====================================================================
 Features:
 1. Member Authentication & Admin Authorization Engine (Default users: Datta / 555, Vinayak / 000).
-2. Authorized Member Management (Only logged-in members can add new members).
-3. Resilient API handlers returning strictly JSON (no HTML error pages).
-4. Step-by-step progress logging with explicit stdout flushing.
-5. Fault-tolerant image/PDF processing with memory garbage collection.
-6. Non-blocking Cloudinary & Firestore logging integrations.
+2. Multi-Section Workflows (Support for New Proprietory Firm Drug License).
+3. Robust Multi-Source PDF & Image Processing Engine.
+4. Resilient API handlers returning strictly JSON (no HTML error pages).
+5. Step-by-step progress logging with explicit stdout flushing.
+6. Fault-tolerant image/PDF processing with memory garbage collection.
+7. Non-blocking Cloudinary & Firestore logging integrations.
 """
 
 import os
@@ -30,6 +31,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps, ExifTags
 import requests
+import pypdf
 import tornado.ioloop
 import tornado.web
 
@@ -77,7 +79,6 @@ def load_users():
             with open(USERS_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict) and data:
-                    # Ensure default users always exist
                     updated = False
                     for k, v in DEFAULT_USERS.items():
                         if k not in data:
@@ -176,44 +177,160 @@ WORKFLOWS = {
             }
         ]
     },
-    "drug_license": {
-        "id": "drug_license",
-        "title": "Drug License Application",
+    "new_proprietorship_drug_license": {
+        "id": "new_proprietorship_drug_license",
+        "title": "New Proprietory Firm Drug License",
         "category": "Pharmacy & Trade",
-        "icon": "fa-prescription-bottle-medical",
-        "description": "Prepare compliance documents for retail/wholesale Drug License.",
-        "documents": [
+        "icon": "fa-store",
+        "description": "Complete document preparation for New Proprietary Firm Drug License across Proprietor, Pharmacist, and Premises sections.",
+        "sections": [
             {
-                "id": "applicant_photo",
-                "label": "Applicant Photo",
-                "type": "image",
-                "output_name": "Applicant_Photo.jpg",
-                "width": 160,
-                "height": 160,
-                "max_kb": 20,
-                "hint": "Exact 160x160 px, JPG under 20 KB"
+                "id": "proprietor_docs",
+                "title": "1. Proprietor Documents",
+                "icon": "fa-user-tie",
+                "documents": [
+                    {
+                        "id": "photo",
+                        "label": "Photo",
+                        "type": "image",
+                        "output_name": "Photo.jpg",
+                        "width": 160,
+                        "height": 160,
+                        "max_kb": 50,
+                        "hint": "Accepted format: Image (JPG output under 50 KB)"
+                    },
+                    {
+                        "id": "aadhaar_pan",
+                        "label": "Aadhaar Card + PAN Card",
+                        "type": "pdf",
+                        "multi_sources": [
+                            {"id": "aadhaar", "label": "Aadhaar Card", "hint": "Upload Aadhaar Card (Image or PDF)"},
+                            {"id": "pan", "label": "PAN Card", "hint": "Upload PAN Card (Image or PDF)"}
+                        ],
+                        "output_name": "Aadhaar_PAN.pdf",
+                        "max_kb": 125,
+                        "hint": "Upload Aadhaar Card & PAN Card. Combined PDF under 125 KB"
+                    },
+                    {
+                        "id": "qualification",
+                        "label": "Qualification Certificate",
+                        "type": "pdf",
+                        "output_name": "Qualification.pdf",
+                        "max_kb": 125,
+                        "hint": "Accepted format: Image or PDF (PDF output under 125 KB)"
+                    }
+                ]
             },
             {
-                "id": "signature",
-                "label": "Signature",
-                "type": "image",
-                "output_name": "Signature.jpg",
-                "width": 160,
-                "height": 40,
-                "max_kb": 20,
-                "hint": "Exact 160x40 px, JPG under 20 KB"
+                "id": "pharmacist_docs",
+                "title": "2. Pharmacist Documents",
+                "icon": "fa-user-nurse",
+                "documents": [
+                    {
+                        "id": "pharmacist_photo",
+                        "label": "Pharmacist Photo",
+                        "type": "image",
+                        "output_name": "Pharmacist_Photo.jpg",
+                        "width": 160,
+                        "height": 160,
+                        "max_kb": 50,
+                        "hint": "Accepted format: Image (JPG output under 50 KB)"
+                    },
+                    {
+                        "id": "registration_ppp",
+                        "label": "Registration Certificate + PPP Card",
+                        "type": "pdf",
+                        "multi_sources": [
+                            {"id": "reg_cert", "label": "Registration Certificate", "hint": "Upload Registration Certificate (Image or PDF)"},
+                            {"id": "ppp_card", "label": "PPP Card", "hint": "Upload PPP Card (Image or PDF)"}
+                        ],
+                        "output_name": "Registration_PPP.pdf",
+                        "max_kb": 125,
+                        "hint": "Upload Registration Certificate & PPP Card. Combined PDF under 125 KB"
+                    },
+                    {
+                        "id": "appointment_acceptance_selfdeclaration",
+                        "label": "Appointment Letter + Acceptance Letter + Self Declaration",
+                        "type": "pdf",
+                        "multi_sources": [
+                            {"id": "appointment", "label": "Appointment Letter", "hint": "Upload Appointment Letter (Image or PDF)"},
+                            {"id": "acceptance", "label": "Acceptance Letter", "hint": "Upload Acceptance Letter (Image or PDF)"},
+                            {"id": "self_declaration", "label": "Self Declaration", "hint": "Upload Self Declaration (Image or PDF)"}
+                        ],
+                        "output_name": "Appointment_Acceptance_SelfDeclaration.pdf",
+                        "max_kb": 125,
+                        "hint": "Upload Appointment, Acceptance & Self Declaration. Combined PDF under 125 KB"
+                    },
+                    {
+                        "id": "address_proof",
+                        "label": "Address Proof",
+                        "type": "pdf",
+                        "output_name": "Address_Proof.pdf",
+                        "max_kb": 125,
+                        "hint": "Accepted format: Image or PDF (PDF output under 125 KB)"
+                    }
+                ]
             },
             {
-                "id": "premises_plan",
-                "label": "Premises Blueprint Plan",
-                "type": "pdf",
-                "output_name": "Premises_Blueprint.pdf",
-                "max_kb": 100,
-                "hint": "PDF document under 100 KB"
+                "id": "premises_docs",
+                "title": "3. Premises Documents",
+                "icon": "fa-building",
+                "documents": [
+                    {
+                        "id": "light_bill_tax_receipt",
+                        "label": "Light Bill + Tax Receipt",
+                        "type": "pdf",
+                        "multi_sources": [
+                            {"id": "light_bill", "label": "Light Bill", "hint": "Upload Light Bill (Image or PDF)"},
+                            {"id": "tax_receipt", "label": "Tax Receipt", "hint": "Upload Tax Receipt (Image or PDF)"}
+                        ],
+                        "output_name": "Light_Bill_Tax_Receipt.pdf",
+                        "max_kb": 125,
+                        "hint": "Upload Light Bill & Tax Receipt. Combined PDF under 125 KB"
+                    },
+                    {
+                        "id": "cold_storage_namuna8",
+                        "label": "Cold Storage + Namuna 8",
+                        "type": "pdf",
+                        "multi_sources": [
+                            {"id": "cold_storage", "label": "Cold Storage Certificate", "hint": "Upload Cold Storage Certificate (Image or PDF)"},
+                            {"id": "namuna_8", "label": "Namuna 8", "hint": "Upload Namuna 8 (Image or PDF)"}
+                        ],
+                        "output_name": "Cold_Storage_Namuna8.pdf",
+                        "max_kb": 125,
+                        "hint": "Upload Cold Storage Certificate & Namuna 8. Combined PDF under 125 KB"
+                    },
+                    {
+                        "id": "rent_agreement",
+                        "label": "Rent Agreement",
+                        "type": "pdf_only",
+                        "output_name": "Rent_Agreement.pdf",
+                        "max_kb": 150,
+                        "hint": "Accepted format: PDF only (PDF output under 150 KB)"
+                    },
+                    {
+                        "id": "plan_layout",
+                        "label": "Plan Layout",
+                        "type": "pdf",
+                        "output_name": "Plan_Layout.pdf",
+                        "max_kb": 125,
+                        "hint": "Accepted format: Image or PDF (PDF output under 125 KB)"
+                    }
+                ]
             }
         ]
     }
 }
+
+def get_workflow_documents(workflow):
+    docs = []
+    if "sections" in workflow:
+        for sec in workflow["sections"]:
+            for d in sec["documents"]:
+                docs.append(d)
+    elif "documents" in workflow:
+        docs = workflow["documents"]
+    return docs
 
 # ----------------------------------------------------------------------
 # MSPC Password & Login ID Helper Functions
@@ -416,6 +533,28 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
     if flips_v is None: flips_v = []
     if free_angles is None: free_angles = []
 
+    # Check if inputs contain existing PDF files
+    has_pdf_file = any(p.lower().endswith('.pdf') for p in input_paths if os.path.exists(p))
+
+    if has_pdf_file and len(input_paths) == 1 and input_paths[0].lower().endswith('.pdf'):
+        # Direct PDF optimization
+        src_pdf = input_paths[0]
+        try:
+            reader = pypdf.PdfReader(src_pdf)
+            writer = pypdf.PdfWriter()
+            for page in reader.pages:
+                page.compress_content_streams()
+                writer.add_page(page)
+            
+            with open(output_path, "wb") as f_out:
+                writer.write(f_out)
+            
+            size_kb = os.path.getsize(output_path) / 1024.0
+            if size_kb <= max_kb:
+                return size_kb, len(reader.pages)
+        except Exception as e:
+            print(f"⚠️ Direct PDF copy warning: {e}", flush=True)
+
     images = []
     for idx, path in enumerate(input_paths):
         if not os.path.exists(path) or os.path.getsize(path) == 0:
@@ -425,34 +564,43 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
             continue
 
         try:
-            pil = Image.open(path).convert("RGB")
-            try:
-                pil = ImageOps.exif_transpose(pil)
-            except Exception:
-                pass
+            if path.lower().endswith('.pdf'):
+                # Extract pages or convert via PyPDF
+                try:
+                    reader = pypdf.PdfReader(path)
+                    for page in reader.pages:
+                        for img_obj in page.images:
+                            pil_img = Image.open(BytesIO(img_obj.data)).convert("RGB")
+                            images.append(pil_img)
+                except Exception as pdf_err:
+                    print(f"⚠️ PDF extraction fallback for {path}: {pdf_err}", flush=True)
+                    blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
+                    images.append(blank)
+            else:
+                pil = Image.open(path).convert("RGB")
+                try:
+                    pil = ImageOps.exif_transpose(pil)
+                except Exception:
+                    pass
 
-            cv_img = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
-            
-            m_rot = manual_rotations[idx] if idx < len(manual_rotations) else 0
-            f_h = flips_h[idx] if idx < len(flips_h) else False
-            f_v = flips_v[idx] if idx < len(flips_v) else False
-            f_ang = free_angles[idx] if idx < len(free_angles) else 0.0
+                cv_img = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
+                
+                m_rot = manual_rotations[idx] if idx < len(manual_rotations) else 0
+                f_h = flips_h[idx] if idx < len(flips_h) else False
+                f_v = flips_v[idx] if idx < len(flips_v) else False
+                f_ang = free_angles[idx] if idx < len(free_angles) else 0.0
 
-            processed_bgr = process_raw_image(cv_img, angle=m_rot, flip_h=f_h, flip_v=f_v, free_angle=f_ang)
-            processed_rgb = cv2.cvtColor(processed_bgr, cv2.COLOR_BGR2RGB)
-            processed_pil = Image.fromarray(processed_rgb)
+                processed_bgr = process_raw_image(cv_img, angle=m_rot, flip_h=f_h, flip_v=f_v, free_angle=f_ang)
+                processed_rgb = cv2.cvtColor(processed_bgr, cv2.COLOR_BGR2RGB)
+                processed_pil = Image.fromarray(processed_rgb)
 
-            clean_pil = Image.new(processed_pil.mode, processed_pil.size)
-            clean_pil.paste(processed_pil)
-            images.append(clean_pil)
+                clean_pil = Image.new(processed_pil.mode, processed_pil.size)
+                clean_pil.paste(processed_pil)
+                images.append(clean_pil)
 
-            del cv_img, processed_bgr, processed_rgb, processed_pil
+                del cv_img, processed_bgr, processed_rgb, processed_pil
         except Exception as err:
-            try:
-                p = Image.open(path).convert("RGB")
-                images.append(p)
-            except Exception:
-                print(f"⚠️ Skipping unreadable file {path}: {err}", flush=True)
+            print(f"⚠️ Skipping file {path}: {err}", flush=True)
 
     if not images:
         blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
@@ -870,6 +1018,7 @@ class ApiProcessWorkflowHandler(BaseHandler):
 
             workflow_id = self.get_body_argument("workflow_id", default="ppp_renewal")
             workflow = WORKFLOWS.get(workflow_id, WORKFLOWS["ppp_renewal"])
+            all_documents = get_workflow_documents(workflow)
             
             applicant_name = self.get_body_argument("applicant_name", default="Applicant").strip()
             email = self.get_body_argument("email", default="Not Provided").strip()
@@ -897,16 +1046,67 @@ class ApiProcessWorkflowHandler(BaseHandler):
 
             processed_files_summary = []
 
-            print(f"📄 [STEP 3] Starting document processing for {len(workflow['documents'])} items...", flush=True)
+            print(f"📄 [STEP 3] Starting document processing for {len(all_documents)} items...", flush=True)
 
-            for idx_doc, doc_cfg in enumerate(workflow["documents"], start=1):
+            for idx_doc, doc_cfg in enumerate(all_documents, start=1):
                 doc_id = doc_cfg["id"]
                 target_filename = doc_cfg["output_name"]
                 target_path = os.path.join(job_output_dir, target_filename)
 
                 print(f"   ➜ [STEP 3.{idx_doc}] Processing document '{doc_id}' -> '{target_filename}'", flush=True)
 
-                if doc_cfg.get("multi_side"):
+                if doc_cfg.get("multi_sources"):
+                    # Merging multiple separate uploaded files into one PDF
+                    uploaded_paths = []
+                    manual_rots = []
+                    flips_h = []
+                    flips_v = []
+
+                    for src in doc_cfg["multi_sources"]:
+                        src_id = src["id"]
+                        files = self.request.files.get(src_id, [])
+                        rot = int(self.get_body_argument(f"rot_{src_id}", default="0"))
+                        fliph = self.get_body_argument(f"fliph_{src_id}", default="false").lower() == "true"
+                        flipv = self.get_body_argument(f"flipv_{src_id}", default="false").lower() == "true"
+
+                        for f in files:
+                            tmp_p = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{f['filename']}")
+                            with open(tmp_p, "wb") as out_f:
+                                out_f.write(f['body'])
+                            if os.path.exists(tmp_p) and os.path.getsize(tmp_p) > 0:
+                                uploaded_paths.append(tmp_p)
+                                manual_rots.append(rot)
+                                flips_h.append(fliph)
+                                flips_v.append(flipv)
+
+                    if not uploaded_paths:
+                        blank_img = Image.new("RGB", (600, 800), color=(255, 255, 255))
+                        tmp_p = os.path.join(UPLOAD_DIR, f"placeholder_{uuid.uuid4().hex}.jpg")
+                        blank_img.save(tmp_p)
+                        uploaded_paths = [tmp_p]
+                        manual_rots = [0]
+                        flips_h = [False]
+                        flips_v = [False]
+
+                    merged_kb, page_count = process_pdf_document(
+                        uploaded_paths,
+                        target_path,
+                        max_kb=doc_cfg.get("max_kb", 125),
+                        manual_rotations=manual_rots,
+                        flips_h=flips_h,
+                        flips_v=flips_v
+                    )
+
+                    download_url = f"/outputs/{job_id}/{folder_name}/{target_filename}"
+                    processed_files_summary.append({
+                        "filename": target_filename,
+                        "label": doc_cfg["label"],
+                        "size_kb": round(merged_kb, 1),
+                        "status": f"✓ Combined PDF ({page_count} pg) | {merged_kb:.1f} KB (<{doc_cfg['max_kb']} KB)",
+                        "download_url": download_url
+                    })
+
+                elif doc_cfg.get("multi_side"):
                     files_front = self.request.files.get(f"{doc_id}_front", [])
                     files_back = self.request.files.get(f"{doc_id}_back", [])
 
@@ -1005,26 +1205,26 @@ class ApiProcessWorkflowHandler(BaseHandler):
                             flip_v=flips_v[0] if flips_v else False
                         )
                         status_text = f"✓ Signature Scan (160x40 px, White BG) | {final_kb:.1f} KB (<20 KB)"
-                    elif doc_cfg["type"] == "pdf":
+                    elif doc_cfg.get("type") in ["pdf", "pdf_only"]:
                         final_kb, page_count = process_pdf_document(
                             uploaded_paths, target_path,
-                            max_kb=doc_cfg.get("max_kb", 100),
+                            max_kb=doc_cfg.get("max_kb", 125),
                             manual_rotations=manual_rots,
                             flips_h=flips_h,
                             flips_v=flips_v
                         )
-                        status_text = f"✓ Upright PDF ({page_count} pg) | {final_kb:.1f} KB (<{doc_cfg['max_kb']} KB)"
+                        status_text = f"✓ PDF Document ({page_count} pg) | {final_kb:.1f} KB (<{doc_cfg['max_kb']} KB)"
                     else:
                         final_kb = process_image_document(
                             uploaded_paths[0], target_path,
                             target_w=doc_cfg.get("width", 160),
                             target_h=doc_cfg.get("height", 160),
-                            max_kb=doc_cfg.get("max_kb", 20),
+                            max_kb=doc_cfg.get("max_kb", 50),
                             manual_rotation=manual_rots[0] if manual_rots else 0,
                             flip_h=flips_h[0] if flips_h else False,
                             flip_v=flips_v[0] if flips_v else False
                         )
-                        status_text = f"✓ Resized {doc_cfg['width']}x{doc_cfg['height']} px JPG | {final_kb:.1f} KB (<{doc_cfg['max_kb']} KB)"
+                        status_text = f"✓ Resized {doc_cfg.get('width', 160)}x{doc_cfg.get('height', 160)} px JPG | {final_kb:.1f} KB (<{doc_cfg['max_kb']} KB)"
 
                     download_url = f"/outputs/{job_id}/{folder_name}/{target_filename}"
                     processed_files_summary.append({
@@ -1060,7 +1260,7 @@ Generated Date        : {current_date_str}
                 details_download_url = f"/outputs/{job_id}/{folder_name}/Details.txt"
                 processed_files_summary.append({
                     "filename": "Details.txt",
-                    "label": "User Information & MSPC Login Credentials File",
+                    "label": "User Information & Credentials File",
                     "size_kb": round(os.path.getsize(details_path) / 1024.0, 1),
                     "status": "✓ Generated & Verified",
                     "download_url": details_download_url

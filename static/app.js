@@ -1,12 +1,12 @@
 /* ==========================================================================
-   DocFlow Pro - Frontend Engine with Dynamic Member Authentication & OCR
+   DocFlow Pro - Frontend Engine with Section-Based Workflows & Auth
    ========================================================================== */
 
 class DocFlowApp {
   constructor() {
     this.workflows = [];
     this.activeWf = null;
-    this.uploadedFilesMap = {}; // docId -> File or {front: File, back: File}
+    this.uploadedFilesMap = {}; // docId/srcId -> File or {front: File, back: File}
     this.transformParamsMap = {}; // slotId -> { angle, flipH, flipV, freeAngle, deblur, file }
     this.processedFilesList = []; // Array of processed file objects
     this.zipDownloadUrl = null;
@@ -24,8 +24,8 @@ class DocFlowApp {
     this.renderServices();
   }
 
+  // --- MEMBER AUTHENTICATION ENGINE ---
   checkAuthStatus() {
-    // Unconditionally require member login on every visit/refresh across all devices
     this.logoutSilently();
   }
 
@@ -87,11 +87,7 @@ class DocFlowApp {
   }
 
   logout() {
-    this.authToken = null;
-    this.currentUser = null;
-    localStorage.removeItem("docflow_token");
-    localStorage.removeItem("docflow_username");
-    this.showLoginModal();
+    this.logoutSilently();
     this.showToast("Logged out safely.");
   }
 
@@ -190,27 +186,51 @@ class DocFlowApp {
     }
   }
 
+  getWorkflowDocs() {
+    if (!this.activeWf) return [];
+    if (this.activeWf.sections) {
+      let list = [];
+      this.activeWf.sections.forEach(sec => {
+        sec.documents.forEach(d => list.push(d));
+      });
+      return list;
+    }
+    return this.activeWf.documents || [];
+  }
+
   renderServices() {
     const grid = document.getElementById("serviceGrid");
     if (!grid) return;
 
-    let html = this.workflows.map(wf => `
-      <div class="service-card" onclick="docFlowApp.openWorkflow('${wf.id}')">
-        <div>
-          <div class="service-icon">
-            <i class="fa-solid ${wf.icon}"></i>
+    let html = this.workflows.map(wf => {
+      const docsCount = this.getWorkflowDocsForWf(wf).length;
+      return `
+        <div class="service-card" onclick="docFlowApp.openWorkflow('${wf.id}')">
+          <div>
+            <div class="service-icon">
+              <i class="fa-solid ${wf.icon}"></i>
+            </div>
+            <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem;">${wf.title}</h3>
+            <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.4;">${wf.description}</p>
           </div>
-          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem;">${wf.title}</h3>
-          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.4;">${wf.description}</p>
+          <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-blue);">${docsCount} Document Items</span>
+            <span class="btn-back" style="font-size: 0.8rem;">Start Workflow <i class="fa-solid fa-arrow-right"></i></span>
+          </div>
         </div>
-        <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-blue);">${wf.documents.length} Required Files</span>
-          <span class="btn-back" style="font-size: 0.8rem;">Start Workflow <i class="fa-solid fa-arrow-right"></i></span>
-        </div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
 
     grid.innerHTML = html;
+  }
+
+  getWorkflowDocsForWf(wf) {
+    if (wf.sections) {
+      let list = [];
+      wf.sections.forEach(sec => sec.documents.forEach(d => list.push(d)));
+      return list;
+    }
+    return wf.documents || [];
   }
 
   showHome() {
@@ -233,7 +253,7 @@ class DocFlowApp {
     this.processedFilesList = [];
     this.zipDownloadUrl = null;
 
-    // Reset Form Fields to Blank
+    // Reset Form Fields
     document.getElementById("applicantName").value = "";
     document.getElementById("regNumber").value = "";
     document.getElementById("applicantDob").value = "";
@@ -257,121 +277,194 @@ class DocFlowApp {
     const grid = document.getElementById("docUploadGrid");
     if (!grid || !this.activeWf) return;
 
-    let html = this.activeWf.documents.map(doc => {
-      if (doc.multi_side) {
-        return `
-          <div class="doc-card" id="card_${doc.id}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-              <h4 style="font-size: 1rem; font-weight: 700;">${doc.label}</h4>
-              <span class="badge-status" id="badge_${doc.id}">Pending Both Sides</span>
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">${doc.hint}</p>
-            
-            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 140px;">
-                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Front Side</label>
-                <div class="drop-zone" id="dz_${doc.id}_front" onclick="document.getElementById('input_${doc.id}_front').click()">
-                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
-                  <span id="label_${doc.id}_front" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Front File</span>
-                  <input type="file" id="input_${doc.id}_front" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'front', this.files)">
-                </div>
-                <div id="editor_btn_${doc.id}_front"></div>
-              </div>
-
-              <div style="flex: 1; min-width: 140px;">
-                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Back Side</label>
-                <div class="drop-zone" id="dz_${doc.id}_back" onclick="document.getElementById('input_${doc.id}_back').click()">
-                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
-                  <span id="label_${doc.id}_back" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Back File</span>
-                  <input type="file" id="input_${doc.id}_back" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'back', this.files)">
-                </div>
-                <div id="editor_btn_${doc.id}_back"></div>
-              </div>
-            </div>
+    if (this.activeWf.sections) {
+      let html = this.activeWf.sections.map(sec => `
+        <div class="doc-section" style="margin-bottom: 1.8rem; background: rgba(15, 23, 42, 0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-glass);">
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem;">
+            <i class="fa-solid ${sec.icon || 'fa-folder-open'}"></i> ${sec.title}
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem;">
+            ${sec.documents.map(doc => this.renderDocCardHtml(doc)).join("")}
           </div>
-        `;
-      } else {
-        return `
-          <div class="doc-card" id="card_${doc.id}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-              <h4 style="font-size: 1rem; font-weight: 700;">${doc.label}</h4>
-              <span class="badge-status" id="badge_${doc.id}">Pending</span>
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">${doc.hint}</p>
-
-            <div class="drop-zone" id="dz_${doc.id}" onclick="document.getElementById('input_${doc.id}').click()">
-              <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--accent-blue);"></i>
-              <span id="label_${doc.id}" style="font-size: 0.85rem; display: block; margin-top: 0.4rem;">Click to select file</span>
-              <input type="file" id="input_${doc.id}" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'single', this.files)">
-            </div>
-            <div id="editor_btn_${doc.id}" style="text-align: center;"></div>
-          </div>
-        `;
-      }
-    }).join("");
-
-    grid.innerHTML = html;
+        </div>
+      `).join("");
+      grid.innerHTML = html;
+    } else {
+      let html = this.activeWf.documents.map(doc => this.renderDocCardHtml(doc)).join("");
+      grid.innerHTML = html;
+    }
   }
 
-  handleFileSelect(docId, mode, files) {
+  renderDocCardHtml(doc) {
+    if (doc.multi_sources) {
+      let sourcesHtml = doc.multi_sources.map(src => `
+        <div style="flex: 1; min-width: 130px; margin-top: 0.4rem;">
+          <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">${src.label}</label>
+          <div class="drop-zone" id="dz_${src.id}" onclick="document.getElementById('input_${src.id}').click()">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+            <span id="label_${src.id}" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select ${src.label}</span>
+            <input type="file" id="input_${src.id}" accept="${doc.type === 'pdf_only' ? 'application/pdf' : 'image/*,application/pdf'}" style="display: none;" onchange="docFlowApp.handleFileSelect('${src.id}', 'single', this.files, '${doc.id}')">
+          </div>
+          <div id="editor_btn_${src.id}"></div>
+        </div>
+      `).join("");
+
+      return `
+        <div class="doc-card" id="card_${doc.id}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <h4 style="font-size: 0.98rem; font-weight: 700;">${doc.label}</h4>
+            <span class="badge-status" id="badge_${doc.id}">Pending</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.6rem;">
+            Outputs <strong>${doc.output_name}</strong> (< ${doc.max_kb} KB PDF)
+          </p>
+          <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+            ${sourcesHtml}
+          </div>
+        </div>
+      `;
+    } else if (doc.multi_side) {
+      return `
+        <div class="doc-card" id="card_${doc.id}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <h4 style="font-size: 0.98rem; font-weight: 700;">${doc.label}</h4>
+            <span class="badge-status" id="badge_${doc.id}">Pending Both Sides</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.6rem;">${doc.hint}</p>
+          
+          <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 130px;">
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Front Side</label>
+              <div class="drop-zone" id="dz_${doc.id}_front" onclick="document.getElementById('input_${doc.id}_front').click()">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+                <span id="label_${doc.id}_front" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Front File</span>
+                <input type="file" id="input_${doc.id}_front" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'front', this.files)">
+              </div>
+              <div id="editor_btn_${doc.id}_front"></div>
+            </div>
+
+            <div style="flex: 1; min-width: 130px;">
+              <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Back Side</label>
+              <div class="drop-zone" id="dz_${doc.id}_back" onclick="document.getElementById('input_${doc.id}_back').click()">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+                <span id="label_${doc.id}_back" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Back File</span>
+                <input type="file" id="input_${doc.id}_back" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'back', this.files)">
+              </div>
+              <div id="editor_btn_${doc.id}_back"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      const acceptAttr = doc.type === 'image' ? 'image/*' : (doc.type === 'pdf_only' ? 'application/pdf' : 'image/*,application/pdf');
+      return `
+        <div class="doc-card" id="card_${doc.id}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+            <h4 style="font-size: 0.98rem; font-weight: 700;">${doc.label}</h4>
+            <span class="badge-status" id="badge_${doc.id}">Pending</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.8rem;">${doc.hint}</p>
+
+          <div class="drop-zone" id="dz_${doc.id}" onclick="document.getElementById('input_${doc.id}').click()">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.6rem; color: var(--accent-blue);"></i>
+            <span id="label_${doc.id}" style="font-size: 0.82rem; display: block; margin-top: 0.4rem;">Click to select file</span>
+            <input type="file" id="input_${doc.id}" accept="${acceptAttr}" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'single', this.files)">
+          </div>
+          <div id="editor_btn_${doc.id}" style="text-align: center;"></div>
+        </div>
+      `;
+    }
+  }
+
+  handleFileSelect(slotId, mode, files, parentDocId) {
     if (!files || files.length === 0) return;
     const file = files[0];
 
-    this.assignFileToSlot(docId, mode, file);
+    this.assignFileToSlot(slotId, mode, file, parentDocId);
     this.checkAndUnlockApplicantForm();
 
-    if (docId === "old_ppp_card" || docId === "reg_cert" || docId === "aadhaar") {
+    if (slotId === "old_ppp_card" || slotId === "reg_cert" || slotId === "aadhaar" || slotId === "photo") {
       this.runOcrExtraction(file);
     }
   }
 
-  assignFileToSlot(docId, mode, file) {
-    let slotId = docId;
+  assignFileToSlot(slotId, mode, file, parentDocId) {
+    let targetKey = slotId;
     if (mode === "single") {
-      this.uploadedFilesMap[docId] = file;
-      document.getElementById(`label_${docId}`).innerText = `✓ ${file.name}`;
-      document.getElementById(`badge_${docId}`).innerText = "Uploaded";
+      this.uploadedFilesMap[slotId] = file;
+      const lbl = document.getElementById(`label_${slotId}`);
+      if (lbl) lbl.innerText = `✓ ${file.name}`;
+      const bdg = document.getElementById(`badge_${slotId}`);
+      if (bdg) bdg.innerText = "Uploaded";
+      if (parentDocId) {
+        this.updateParentMultiSourceBadge(parentDocId);
+      }
     } else if (mode === "front") {
-      if (!this.uploadedFilesMap[docId]) this.uploadedFilesMap[docId] = {};
-      this.uploadedFilesMap[docId].front = file;
-      slotId = `${docId}_front`;
-      document.getElementById(`label_${docId}_front`).innerText = `✓ Front (${file.name.substring(0, 14)}...)`;
+      if (!this.uploadedFilesMap[slotId]) this.uploadedFilesMap[slotId] = {};
+      this.uploadedFilesMap[slotId].front = file;
+      targetKey = `${slotId}_front`;
+      const lbl = document.getElementById(`label_${slotId}_front`);
+      if (lbl) lbl.innerText = `✓ Front (${file.name.substring(0, 12)}...)`;
     } else if (mode === "back") {
-      if (!this.uploadedFilesMap[docId]) this.uploadedFilesMap[docId] = {};
-      this.uploadedFilesMap[docId].back = file;
-      slotId = `${docId}_back`;
-      document.getElementById(`label_${docId}_back`).innerText = `✓ Back (${file.name.substring(0, 14)}...)`;
+      if (!this.uploadedFilesMap[slotId]) this.uploadedFilesMap[slotId] = {};
+      this.uploadedFilesMap[slotId].back = file;
+      targetKey = `${slotId}_back`;
+      const lbl = document.getElementById(`label_${slotId}_back`);
+      if (lbl) lbl.innerText = `✓ Back (${file.name.substring(0, 12)}...)`;
     }
 
-    if (mode !== "single" && this.uploadedFilesMap[docId]?.front) {
-      document.getElementById(`badge_${docId}`).innerText = "Ready";
+    if (mode !== "single" && this.uploadedFilesMap[slotId]?.front) {
+      const bdg = document.getElementById(`badge_${slotId}`);
+      if (bdg) bdg.innerText = "Ready";
     }
 
-    this.transformParamsMap[slotId] = { angle: 0, flipH: false, flipV: false, freeAngle: 0.0, deblur: true, file: file };
+    this.transformParamsMap[targetKey] = { angle: 0, flipH: false, flipV: false, freeAngle: 0.0, deblur: true, file: file };
 
-    const container = document.getElementById(`editor_btn_${slotId}`);
+    const container = document.getElementById(`editor_btn_${targetKey}`);
     if (container) {
       container.innerHTML = `
-        <button type="button" class="btn-back" style="font-size:0.75rem; padding:0.3rem 0.8rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${slotId}')">
-          <i class="fa-solid fa-sliders"></i> Open Editor Pop-up (0°)
+        <button type="button" class="btn-back" style="font-size:0.72rem; padding:0.25rem 0.6rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${targetKey}')">
+          <i class="fa-solid fa-sliders"></i> Pop-up Editor (0°)
         </button>
       `;
     }
   }
 
+  updateParentMultiSourceBadge(parentDocId) {
+    const allDocs = this.getWorkflowDocs();
+    const parentDoc = allDocs.find(d => d.id === parentDocId);
+    if (!parentDoc || !parentDoc.multi_sources) return;
+
+    let filled = parentDoc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
+    const bdg = document.getElementById(`badge_${parentDocId}`);
+    if (bdg) {
+      bdg.innerText = filled ? "Ready" : "In Progress";
+    }
+  }
+
   checkAndUnlockApplicantForm() {
     if (!this.activeWf) return;
+    const allDocs = this.getWorkflowDocs();
     let allReady = true;
 
-    for (const doc of this.activeWf.documents) {
-      const entry = this.uploadedFilesMap[doc.id];
-      if (!entry) {
-        allReady = false;
-        break;
-      }
-      if (doc.multi_side && (!entry.front || !entry.back)) {
-        allReady = false;
-        break;
+    for (const doc of allDocs) {
+      if (doc.multi_sources) {
+        let filled = doc.multi_sources.every(src => !!this.uploadedFilesMap[src.id]);
+        if (!filled) {
+          allReady = false;
+          break;
+        }
+      } else if (doc.multi_side) {
+        const entry = this.uploadedFilesMap[doc.id];
+        if (!entry || !entry.front || !entry.back) {
+          allReady = false;
+          break;
+        }
+      } else {
+        if (!this.uploadedFilesMap[doc.id]) {
+          allReady = false;
+          break;
+        }
       }
     }
 
@@ -402,7 +495,7 @@ class DocFlowApp {
         
         if (ext.name) {
           let cleanName = ext.name.replace(/[^A-Za-z0-9]/g, '_');
-          document.getElementById("folderName").value = `${cleanName}_PPP_Renewal`;
+          document.getElementById("folderName").value = `${cleanName}_Package`;
         }
 
         this.showToast("Auto-OCR recognized document data!");
@@ -416,10 +509,11 @@ class DocFlowApp {
     const list = document.getElementById("docSummaryList");
     if (!list || !this.activeWf) return;
 
-    let html = this.activeWf.documents.map(doc => `
+    const allDocs = this.getWorkflowDocs();
+    let html = allDocs.map(doc => `
       <div class="summary-item">
         <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <i class="fa-solid fa-file-pdf" style="color: var(--accent-blue);"></i>
+          <i class="fa-solid ${doc.type === 'image' ? 'fa-image' : 'fa-file-pdf'}" style="color: var(--accent-blue);"></i>
           <span style="font-size: 0.88rem; font-weight: 600;">${doc.output_name} (${doc.label})</span>
         </div>
         <span class="badge-status" style="background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);">
@@ -597,8 +691,8 @@ class DocFlowApp {
       const container = document.getElementById(`editor_btn_${this.modalSlotId}`);
       if (container) {
         container.innerHTML = `
-          <button type="button" class="btn-back" style="font-size:0.75rem; padding:0.3rem 0.8rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${this.modalSlotId}')">
-            <i class="fa-solid fa-sliders"></i> Open Editor Pop-up (${params.angle}°)
+          <button type="button" class="btn-back" style="font-size:0.72rem; padding:0.25rem 0.6rem; margin-top:0.3rem;" onclick="docFlowApp.openRotationModal('${this.modalSlotId}')">
+            <i class="fa-solid fa-sliders"></i> Pop-up Editor (${params.angle}°)
           </button>
         `;
       }
@@ -636,31 +730,47 @@ class DocFlowApp {
     formData.append("mobile", mobile);
     formData.append("folder_name", folderName);
 
-    for (const doc of this.activeWf.documents) {
-      const entry = this.uploadedFilesMap[doc.id];
-      if (doc.multi_side && entry) {
-        if (entry.front) {
-          const slot = `${doc.id}_front`;
-          const params = this.transformParamsMap[slot] || { angle: 0, flipH: false, flipV: false };
-          formData.append(`${doc.id}_front`, entry.front);
-          formData.append(`rot_${doc.id}_front`, params.angle);
-          formData.append(`fliph_${doc.id}_front`, params.flipH);
-          formData.append(`flipv_${doc.id}_front`, params.flipV);
+    const allDocs = this.getWorkflowDocs();
+
+    for (const doc of allDocs) {
+      if (doc.multi_sources) {
+        for (const src of doc.multi_sources) {
+          const file = this.uploadedFilesMap[src.id];
+          if (file) {
+            const params = this.transformParamsMap[src.id] || { angle: 0, flipH: false, flipV: false };
+            formData.append(src.id, file);
+            formData.append(`rot_${src.id}`, params.angle);
+            formData.append(`fliph_${src.id}`, params.flipH);
+            formData.append(`flipv_${src.id}`, params.flipV);
+          }
         }
-        if (entry.back) {
-          const slot = `${doc.id}_back`;
-          const params = this.transformParamsMap[slot] || { angle: 0, flipH: false, flipV: false };
-          formData.append(`${doc.id}_back`, entry.back);
-          formData.append(`rot_${doc.id}_back`, params.angle);
-          formData.append(`fliph_${doc.id}_back`, params.flipH);
-          formData.append(`flipv_${doc.id}_back`, params.flipV);
+      } else if (doc.multi_side) {
+        const entry = this.uploadedFilesMap[doc.id];
+        if (entry) {
+          if (entry.front) {
+            const params = this.transformParamsMap[`${doc.id}_front`] || { angle: 0, flipH: false, flipV: false };
+            formData.append(`${doc.id}_front`, entry.front);
+            formData.append(`rot_${doc.id}_front`, params.angle);
+            formData.append(`fliph_${doc.id}_front`, params.flipH);
+            formData.append(`flipv_${doc.id}_front`, params.flipV);
+          }
+          if (entry.back) {
+            const params = this.transformParamsMap[`${doc.id}_back`] || { angle: 0, flipH: false, flipV: false };
+            formData.append(`${doc.id}_back`, entry.back);
+            formData.append(`rot_${doc.id}_back`, params.angle);
+            formData.append(`fliph_${doc.id}_back`, params.flipH);
+            formData.append(`flipv_${doc.id}_back`, params.flipV);
+          }
         }
-      } else if (entry) {
-        const params = this.transformParamsMap[doc.id] || { angle: 0, flipH: false, flipV: false };
-        formData.append(doc.id, entry);
-        formData.append(`rot_${doc.id}`, params.angle);
-        formData.append(`fliph_${doc.id}`, params.flipH);
-        formData.append(`flipv_${doc.id}`, params.flipV);
+      } else {
+        const file = this.uploadedFilesMap[doc.id];
+        if (file) {
+          const params = this.transformParamsMap[doc.id] || { angle: 0, flipH: false, flipV: false };
+          formData.append(doc.id, file);
+          formData.append(`rot_${doc.id}`, params.angle);
+          formData.append(`fliph_${doc.id}`, params.flipH);
+          formData.append(`flipv_${doc.id}`, params.flipV);
+        }
       }
     }
 
