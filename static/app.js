@@ -24,18 +24,36 @@ class DocFlowApp {
     this.renderServices();
   }
 
-  // --- MEMBER AUTHENTICATION ENGINE ---
-  checkAuthStatus() {
+  async checkAuthStatus() {
     const savedToken = localStorage.getItem("docflow_token");
     const savedUser = localStorage.getItem("docflow_username");
 
     if (savedToken && savedUser) {
-      this.authToken = savedToken;
-      this.currentUser = savedUser;
-      this.showAuthenticatedApp();
-    } else {
-      this.showLoginModal();
+      try {
+        const res = await fetch(`/api/check_auth?token=${encodeURIComponent(savedToken)}`, {
+          headers: { "Authorization": `Bearer ${savedToken}` }
+        });
+        const data = await res.json();
+        if (data.status === "success" && data.authenticated) {
+          this.authToken = savedToken;
+          this.currentUser = data.username || savedUser;
+          this.showAuthenticatedApp();
+          return;
+        }
+      } catch (e) {
+        console.error("Auth verification note:", e);
+      }
     }
+
+    this.logoutSilently();
+  }
+
+  logoutSilently() {
+    this.authToken = null;
+    this.currentUser = null;
+    localStorage.removeItem("docflow_token");
+    localStorage.removeItem("docflow_username");
+    this.showLoginModal();
   }
 
   async handleLogin(event) {
