@@ -738,9 +738,15 @@ class ApiLoginHandler(BaseHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
-            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
-            username = body.get("username", self.get_argument("username", default="")).strip()
-            password = body.get("password", self.get_argument("password", default="")).strip()
+            body = {}
+            if self.request.body:
+                try:
+                    body = json.loads(self.request.body.decode('utf-8'))
+                except Exception:
+                    body = {}
+
+            username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
+            password = (body.get("password") or self.get_argument("password", default="") or self.get_body_argument("password", default="")).strip()
 
             if not username or not password:
                 self.set_status(400)
