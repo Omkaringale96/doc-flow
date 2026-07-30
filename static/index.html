@@ -29,7 +29,7 @@
 
       <div class="user-pill" id="userPillContainer" style="display: flex; align-items: center; gap: 0.5rem;">
         <i class="fa-solid fa-circle-user" style="color: var(--accent-green);"></i>
-        <span id="loggedInUserLabel" style="font-weight: 700;">Datta (Officer)</span>
+        <span id="loggedInUserLabel" style="font-weight: 700;">Officer</span>
         <button type="button" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-blue);" onclick="docFlowApp.openAddMemberModal()">
           <i class="fa-solid fa-user-plus"></i> Add Member
         </button>
@@ -103,37 +103,37 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Applicant Full Name</label>
-              <input type="text" id="applicantName" placeholder="e.g. Vinayak Ramesh Patil" value="VINAYAK RAMESH PATIL">
+              <input type="text" id="applicantName" placeholder="Full Name (Auto-filled on OCR)" value="">
             </div>
 
             <div class="form-group">
               <label>Pharmacy Registration Number</label>
-              <input type="text" id="regNumber" placeholder="e.g. 189423" value="189423">
+              <input type="text" id="regNumber" placeholder="Pharmacy Reg Number" value="">
             </div>
 
             <div class="form-group">
               <label>Date of Birth (DD/MM/YYYY)</label>
-              <input type="text" id="applicantDob" placeholder="DD/MM/YYYY" value="21/06/2004">
+              <input type="text" id="applicantDob" placeholder="DD/MM/YYYY" value="">
             </div>
 
             <div class="form-group">
               <label>Registered Mobile Number</label>
-              <input type="text" id="applicantMobile" placeholder="e.g. 9876543210" value="9876543210">
+              <input type="text" id="applicantMobile" placeholder="Mobile Number" value="">
             </div>
 
             <div class="form-group">
               <label>Registered Email ID</label>
-              <input type="email" id="applicantEmail" placeholder="e.g. vinayak@gmail.com" value="vinayak@gmail.com">
+              <input type="email" id="applicantEmail" placeholder="Email Address" value="">
             </div>
 
             <div class="form-group">
               <label>MSPC Portal Login ID</label>
-              <input type="text" id="applicantLoginId" placeholder="Auto-generated Login ID" value="19711112164170">
+              <input type="text" id="applicantLoginId" placeholder="MSPC Portal Login ID" value="">
             </div>
 
             <div class="form-group">
               <label>Folder Name for Download Archive</label>
-              <input type="text" id="folderName" placeholder="e.g. VINAYAK_PPP_Renewal" value="VINAYAK_PPP_Renewal">
+              <input type="text" id="folderName" placeholder="Folder Name for ZIP" value="">
             </div>
           </div>
 
@@ -278,12 +278,12 @@
       <form onsubmit="docFlowApp.handleLogin(event)" style="text-align: left;">
         <div class="form-group" style="margin-bottom: 1rem;">
           <label style="font-size: 0.85rem; font-weight: 600;">Username</label>
-          <input type="text" id="loginUsername" placeholder="Authorized Username" value="Datta" required style="font-size: 0.95rem;">
+          <input type="text" id="loginUsername" placeholder="Enter Username" value="" required style="font-size: 0.95rem;">
         </div>
 
         <div class="form-group" style="margin-bottom: 1.5rem;">
           <label style="font-size: 0.85rem; font-weight: 600;">Password</label>
-          <input type="password" id="loginPassword" placeholder="Authorized Password" value="555" required style="font-size: 0.95rem;">
+          <input type="password" id="loginPassword" placeholder="Enter Password" value="" required style="font-size: 0.95rem;">
         </div>
 
         <button type="submit" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; font-weight: 700;">
@@ -354,7 +354,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: 6px;">
             <span style="font-size: 0.8rem; color: var(--text-muted);">Pharmacy Reg Number:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyRegNo" style="font-size: 0.9rem;">189423</strong>
+              <strong id="copyRegNo" style="font-size: 0.9rem;">-</strong>
               <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('regNumber').value)">Copy Reg</button>
             </div>
           </div>
@@ -362,7 +362,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: 6px;">
             <span style="font-size: 0.8rem; color: var(--text-muted);">Date of Birth (DD/MM/YYYY):</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyDob" style="font-size: 0.9rem;">21/06/2004</strong>
+              <strong id="copyDob" style="font-size: 0.9rem;">-</strong>
               <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantDob').value)">Copy DOB</button>
             </div>
           </div>
@@ -370,7 +370,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: 6px;">
             <span style="font-size: 0.8rem; color: var(--text-muted);">Mobile Number:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyMobile" style="font-size: 0.85rem;">9876543210</strong>
+              <strong id="copyMobile" style="font-size: 0.85rem;">-</strong>
               <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantMobile').value)">Copy Mobile</button>
             </div>
           </div>
@@ -378,7 +378,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 6px; border: 1px solid var(--accent-purple);">
             <span style="font-size: 0.8rem; color: var(--accent-purple); font-weight: 700;">Email Address:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyEmail" style="font-size: 0.85rem; color: var(--accent-purple);">vinayak@gmail.com</strong>
+              <strong id="copyEmail" style="font-size: 0.85rem; color: var(--accent-purple);">-</strong>
               <button type="button" class="btn-primary" style="font-size: 0.75rem; padding: 0.2rem 0.6rem; background: var(--accent-purple);" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantEmail').value)">Copy Email</button>
             </div>
           </div>
@@ -386,7 +386,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(34, 197, 94, 0.1); border-radius: 6px; border: 1px solid var(--accent-green);">
             <span style="font-size: 0.8rem; color: var(--accent-green); font-weight: 700;">Calculated Password:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyPass" style="font-size: 1rem; color: var(--accent-green);">VIN2106</strong>
+              <strong id="copyPass" style="font-size: 1rem; color: var(--accent-green);">-</strong>
               <button type="button" class="btn-primary" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('copyPass').innerText)">Copy Pass</button>
             </div>
           </div>

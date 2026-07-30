@@ -5,7 +5,7 @@
 DocFlow Pro - Production Web Server Engine with Member Authorization
 ====================================================================
 Features:
-1. Member Authentication & Admin Authorization Engine (Default user: Datta / 555).
+1. Member Authentication & Admin Authorization Engine (Default users: Datta / 555, Vinayak / 000).
 2. Authorized Member Management (Only logged-in members can add new members).
 3. Resilient API handlers returning strictly JSON (no HTML error pages).
 4. Step-by-step progress logging with explicit stdout flushing.
@@ -67,7 +67,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Authorized Users Database & Management
 # ----------------------------------------------------------------------
 DEFAULT_USERS = {
-    "Datta": "555"
+    "Datta": "555",
+    "Vinayak": "000"
 }
 
 def load_users():
@@ -76,6 +77,14 @@ def load_users():
             with open(USERS_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict) and data:
+                    # Ensure default users always exist
+                    updated = False
+                    for k, v in DEFAULT_USERS.items():
+                        if k not in data:
+                            data[k] = v
+                            updated = True
+                    if updated:
+                        save_users(data)
                     return data
         except Exception as e:
             print(f"⚠️ Users file read error: {e}", flush=True)
@@ -701,21 +710,21 @@ class ApiExtractDocumentDataHandler(BaseHandler):
                     print("⚠️ EasyOCR read error:", e, flush=True)
 
             reg_match = re.search(r'\b(REG\.?\s*NO\.?|NUMBER|NUM|NO)?[\s\:\-]*(\d{5,6})\b', full_text, re.IGNORECASE)
-            reg_number = reg_match.group(2) if reg_match else "40161"
+            reg_number = reg_match.group(2) if reg_match else ""
 
             dob_match = re.search(r'\b(\d{1,2}[/\.\-]\d{1,2}[/\.\-]\d{2,4})\b', full_text)
-            dob = dob_match.group(1).replace('-', '/').replace('.', '/') if dob_match else "12/11/1971"
+            dob = dob_match.group(1).replace('-', '/').replace('.', '/') if dob_match else ""
 
             mobile_match = re.search(r'\b([6-9]\d{9})\b', full_text)
-            mobile = mobile_match.group(1) if mobile_match else "8830185054"
+            mobile = mobile_match.group(1) if mobile_match else ""
 
             email_match = re.search(r'\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b', full_text)
-            email = email_match.group(1) if email_match else "shankarsingh40717@gmail.com"
+            email = email_match.group(1) if email_match else ""
 
             name_match = re.search(r'\b(SHRI|SMT|KUMAR|PATIL|RAMESH|VINAYAK|SHANKAR|RAMPATI|SINGH)[A-Z\s]{4,35}\b', full_text, re.IGNORECASE)
-            extracted_name = name_match.group(0).strip().upper() if name_match else "SHANKAR RAMPATI SINGH"
+            extracted_name = name_match.group(0).strip().upper() if name_match else ""
 
-            mspc_pass = generate_mspc_password(extracted_name, dob)
+            mspc_pass = generate_mspc_password(extracted_name, dob) if (extracted_name and dob) else ""
 
             del cv_img, pil
             gc.collect()
@@ -728,7 +737,7 @@ class ApiExtractDocumentDataHandler(BaseHandler):
                     "dob": dob,
                     "mobile": mobile,
                     "email": email,
-                    "login_id": f"MSPC{reg_number}",
+                    "login_id": f"MSPC{reg_number}" if reg_number else "",
                     "calculated_password": mspc_pass
                 },
                 "ocr_text": full_text[:200]
@@ -739,13 +748,13 @@ class ApiExtractDocumentDataHandler(BaseHandler):
             self.write({
                 "status": "success",
                 "extracted": {
-                    "name": "SHANKAR RAMPATI SINGH",
-                    "reg_number": "40161",
-                    "dob": "12/11/1971",
-                    "mobile": "8830185054",
-                    "email": "shankarsingh40717@gmail.com",
-                    "login_id": "19711112164170",
-                    "calculated_password": "SHA1211"
+                    "name": "",
+                    "reg_number": "",
+                    "dob": "",
+                    "mobile": "",
+                    "email": "",
+                    "login_id": "",
+                    "calculated_password": ""
                 }
             })
 
@@ -865,10 +874,10 @@ class ApiProcessWorkflowHandler(BaseHandler):
             applicant_name = self.get_body_argument("applicant_name", default="Applicant").strip()
             email = self.get_body_argument("email", default="Not Provided").strip()
             mobile = self.get_body_argument("mobile", default="Not Provided").strip()
-            reg_number = self.get_body_argument("reg_number", default="189423").strip()
+            reg_number = self.get_body_argument("reg_number", default="000000").strip()
             login_id = self.get_body_argument("login_id", default="").strip()
-            dob = self.get_body_argument("dob", default="21/06/2004").strip()
-            folder_name = self.get_body_argument("folder_name", default=f"{applicant_name}_PPP_Renewal").strip()
+            dob = self.get_body_argument("dob", default="01/01/2000").strip()
+            folder_name = self.get_body_argument("folder_name", default=f"{applicant_name}_Package").strip()
 
             print(f"📋 [STEP 1 OK] Parameters: workflow={workflow_id}, applicant='{applicant_name}', reg='{reg_number}', dob='{dob}'", flush=True)
 

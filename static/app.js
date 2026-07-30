@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DocFlow Pro - Frontend Engine with Authorized Member Authentication
+   DocFlow Pro - Frontend Engine with Dynamic Member Authentication & OCR
    ========================================================================== */
 
 class DocFlowApp {
@@ -234,6 +234,15 @@ class DocFlowApp {
     this.processedFilesList = [];
     this.zipDownloadUrl = null;
 
+    // Reset Form Fields to Blank
+    document.getElementById("applicantName").value = "";
+    document.getElementById("regNumber").value = "";
+    document.getElementById("applicantDob").value = "";
+    document.getElementById("applicantMobile").value = "";
+    document.getElementById("applicantEmail").value = "";
+    document.getElementById("applicantLoginId").value = "";
+    document.getElementById("folderName").value = "";
+
     document.getElementById("homeView").style.display = "none";
     document.getElementById("workflowView").style.display = "block";
     document.getElementById("wfTitle").innerText = wf.title;
@@ -260,7 +269,6 @@ class DocFlowApp {
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">${doc.hint}</p>
             
             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-              <!-- Front Side Drop Zone -->
               <div style="flex: 1; min-width: 140px;">
                 <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Front Side</label>
                 <div class="drop-zone" id="dz_${doc.id}_front" onclick="document.getElementById('input_${doc.id}_front').click()">
@@ -271,7 +279,6 @@ class DocFlowApp {
                 <div id="editor_btn_${doc.id}_front"></div>
               </div>
 
-              <!-- Back Side Drop Zone -->
               <div style="flex: 1; min-width: 140px;">
                 <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Back Side</label>
                 <div class="drop-zone" id="dz_${doc.id}_back" onclick="document.getElementById('input_${doc.id}_back').click()">
@@ -387,17 +394,19 @@ class DocFlowApp {
       const data = await res.json();
       if (data.status === "success" && data.extracted) {
         const ext = data.extracted;
-        document.getElementById("applicantName").value = ext.name || "SHANKAR RAMPATI SINGH";
-        document.getElementById("regNumber").value = ext.reg_number || "40161";
-        document.getElementById("applicantDob").value = ext.dob || "12/11/1971";
-        document.getElementById("applicantMobile").value = ext.mobile || "8830185054";
-        document.getElementById("applicantEmail").value = ext.email || "shankarsingh40717@gmail.com";
-        document.getElementById("applicantLoginId").value = ext.login_id || `MSPC${ext.reg_number}`;
+        if (ext.name) document.getElementById("applicantName").value = ext.name;
+        if (ext.reg_number) document.getElementById("regNumber").value = ext.reg_number;
+        if (ext.dob) document.getElementById("applicantDob").value = ext.dob;
+        if (ext.mobile) document.getElementById("applicantMobile").value = ext.mobile;
+        if (ext.email) document.getElementById("applicantEmail").value = ext.email;
+        if (ext.login_id) document.getElementById("applicantLoginId").value = ext.login_id;
         
-        let cleanName = ext.name.replace(/[^A-Za-z0-9]/g, '_');
-        document.getElementById("folderName").value = `${cleanName}_PPP_Renewal`;
+        if (ext.name) {
+          let cleanName = ext.name.replace(/[^A-Za-z0-9]/g, '_');
+          document.getElementById("folderName").value = `${cleanName}_PPP_Renewal`;
+        }
 
-        this.showToast("Auto-OCR extracted Applicant Name & Credentials!");
+        this.showToast("Auto-OCR recognized document data!");
       }
     } catch (e) {
       console.log("OCR Auto-extraction note:", e);
@@ -424,24 +433,27 @@ class DocFlowApp {
   }
 
   openMspcRedirectModal() {
-    const name = document.getElementById("applicantName")?.value || "SHANKAR RAMPATI SINGH";
-    const regNo = document.getElementById("regNumber")?.value || "40161";
-    const dob = document.getElementById("applicantDob")?.value || "12/11/1971";
-    const mobile = document.getElementById("applicantMobile")?.value || "8830185054";
-    const email = document.getElementById("applicantEmail")?.value || "shankarsingh40717@gmail.com";
+    const name = document.getElementById("applicantName")?.value.trim() || "";
+    const regNo = document.getElementById("regNumber")?.value.trim() || "";
+    const dob = document.getElementById("applicantDob")?.value.trim() || "";
+    const mobile = document.getElementById("applicantMobile")?.value.trim() || "";
+    const email = document.getElementById("applicantEmail")?.value.trim() || "";
 
-    let cleanName = name.replace(/[^A-Za-z]/g, '').toUpperCase();
-    let prefix = cleanName.substring(0, 3) || "SHA";
-    let dobParts = dob.split('/');
-    let day = dobParts[0] || "12";
-    let month = dobParts[1] || "11";
-    let pass = `${prefix}${day}${month}`;
+    let pass = "";
+    if (name && dob) {
+      let cleanName = name.replace(/[^A-Za-z]/g, '').toUpperCase();
+      let prefix = cleanName.substring(0, 3);
+      let dobParts = dob.split('/');
+      let day = dobParts[0] || "01";
+      let month = dobParts[1] || "01";
+      pass = `${prefix}${day}${month}`;
+    }
 
-    document.getElementById("copyRegNo").innerText = regNo;
-    document.getElementById("copyDob").innerText = dob;
-    document.getElementById("copyMobile").innerText = mobile;
-    document.getElementById("copyEmail").innerText = email;
-    document.getElementById("copyPass").innerText = pass;
+    document.getElementById("copyRegNo").innerText = regNo || "-";
+    document.getElementById("copyDob").innerText = dob || "-";
+    document.getElementById("copyMobile").innerText = mobile || "-";
+    document.getElementById("copyEmail").innerText = email || "-";
+    document.getElementById("copyPass").innerText = pass || "-";
 
     document.getElementById("mspcRedirectModal").style.display = "flex";
   }
@@ -451,7 +463,7 @@ class DocFlowApp {
   }
 
   copyTextToClipboard(text) {
-    if (!text) return;
+    if (!text || text === "-") return;
     navigator.clipboard.writeText(text).then(() => {
       this.showToast(`Copied "${text}" to clipboard! Paste it on MSPC Portal.`);
     }).catch(err => {
@@ -599,13 +611,13 @@ class DocFlowApp {
   async processWorkflow() {
     if (!this.activeWf) return;
 
-    const applicantName = document.getElementById("applicantName").value || "SHANKAR RAMPATI SINGH";
-    const regNumber = document.getElementById("regNumber").value || "40161";
-    const loginId = document.getElementById("applicantLoginId").value || `MSPC${regNumber}`;
-    const dob = document.getElementById("applicantDob").value || "12/11/1971";
-    const mobile = document.getElementById("applicantMobile").value || "8830185054";
-    const email = document.getElementById("applicantEmail").value || "shankarsingh40717@gmail.com";
-    const folderName = document.getElementById("folderName").value || "RAMPATI_SINGH_PPP_Renewal";
+    const applicantName = document.getElementById("applicantName").value.trim() || "Applicant";
+    const regNumber = document.getElementById("regNumber").value.trim() || "000000";
+    const loginId = document.getElementById("applicantLoginId").value.trim() || `MSPC${regNumber}`;
+    const dob = document.getElementById("applicantDob").value.trim() || "01/01/2000";
+    const mobile = document.getElementById("applicantMobile").value.trim() || "0000000000";
+    const email = document.getElementById("applicantEmail").value.trim() || "applicant@docflow.org";
+    const folderName = document.getElementById("folderName").value.trim() || `${applicantName}_Package`;
 
     const processBtn = document.getElementById("processBtn");
     const processingCard = document.getElementById("processingCard");
