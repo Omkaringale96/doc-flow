@@ -1352,6 +1352,128 @@ Generated Date        : {current_date_str}
             })
 
 
+class ApiEditPdfStandaloneHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            files = self.request.files.get("file", [])
+            if not files:
+                self.set_status(400)
+                self.write({"status": "error", "message": "No PDF file uploaded for editing"})
+                return
+
+            annotations_raw = self.get_body_argument("annotations", default="{}")
+            annotations = json.loads(annotations_raw) if annotations_raw else {}
+
+            target_filename = self.get_body_argument("output_name", default="Edited_Document.pdf").strip()
+            if not target_filename.lower().endswith(".pdf"):
+                target_filename += ".pdf"
+
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            job_id = uuid.uuid4().hex[:8]
+            job_output_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_output_dir, exist_ok=True)
+
+            pdf_bytes = files[0]['body']
+            src_reader = pypdf.PdfReader(BytesIO(pdf_bytes))
+            writer = pypdf.PdfWriter()
+
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.colors import HexColor
+
+            for page_idx, page in enumerate(src_reader.pages, start=1):
+                page_width = float(page.mediabox.width)
+                page_height = float(page.mediabox.height)
+
+                page_annos = annotations.get(str(page_idx), annotations.get(page_idx, {}))
+                text_items = page_annos.get("texts", [])
+                sig_items = page_annos.get("signatures", [])
+                whiteout_items = page_annos.get("whiteouts", [])
+
+                if text_items or sig_items or whiteout_items:
+                    packet = BytesIO()
+                    can = canvas.Canvas(packet, pagesize=(page_width, page_height))
+
+                    # 1. Whiteout Blocks
+                    for w in whiteout_items:
+                        can.setFillColor(HexColor("#ffffff"))
+                        wx = float(w.get("x", 0))
+                        wy = float(w.get("y", 0))
+                        ww = float(w.get("w", 100))
+                        wh = float(w.get("h", 30))
+                        ry = page_height - wy - wh
+                        can.rect(wx, ry, ww, wh, fill=1, stroke=0)
+
+                    # 2. Text Annotations
+                    for t in text_items:
+                        txt_val = str(t.get("text", "")).strip()
+                        if txt_val:
+                            tx = float(t.get("x", 0))
+                            ty = float(t.get("y", 0))
+                            size = int(t.get("size", 14))
+                            color_hex = str(t.get("color", "#0f172a"))
+                            try:
+                                can.setFillColor(HexColor(color_hex))
+                            except Exception:
+                                can.setFillColor(HexColor("#0f172a"))
+                            can.setFont("Helvetica", size)
+                            ry = page_height - ty - size
+                            can.drawString(tx, ry, txt_val)
+
+                    # 3. Signature Stamps
+                    for s in sig_items:
+                        b64_data = s.get("image_data", "")
+                        if "," in b64_data:
+                            b64_data = b64_data.split(",")[1]
+                        if b64_data:
+                            img_bytes = base64.b64decode(b64_data)
+                            pil_sig = Image.open(BytesIO(img_bytes)).convert("RGBA")
+                            
+                            tmp_sig_path = os.path.join(UPLOAD_DIR, f"sig_{uuid.uuid4().hex}.png")
+                            pil_sig.save(tmp_sig_path, "PNG")
+
+                            sx = float(s.get("x", 0))
+                            sy = float(s.get("y", 0))
+                            sw = float(s.get("w", 140))
+                            sh = float(s.get("h", 50))
+                            ry = page_height - sy - sh
+
+                            can.drawImage(tmp_sig_path, sx, ry, width=sw, height=sh, mask='auto')
+                            if os.path.exists(tmp_sig_path):
+                                os.remove(tmp_sig_path)
+
+                    can.save()
+                    packet.seek(0)
+                    overlay_pdf = pypdf.PdfReader(packet)
+                    page.merge_page(overlay_pdf.pages[0])
+
+                page.compress_content_streams()
+                writer.add_page(page)
+
+            out_path = os.path.join(job_output_dir, target_filename)
+            with open(out_path, "wb") as f_out:
+                writer.write(f_out)
+
+            size_kb = os.path.getsize(out_path) / 1024.0
+            print(f"✅ Standalone PDF edited and saved: {out_path} ({size_kb:.1f} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "PDF edited and exported successfully!",
+                "filename": target_filename,
+                "file_size_kb": round(size_kb, 1),
+                "download_url": f"/outputs/{job_id}/{target_filename}"
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -1363,6 +1485,7 @@ def make_app():
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),
         (r"/api/process_workflow", ApiProcessWorkflowHandler),
+        (r"/api/edit_pdf_standalone", ApiEditPdfStandaloneHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)

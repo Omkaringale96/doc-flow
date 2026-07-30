@@ -894,6 +894,446 @@ class DocFlowApp {
       processBtn.disabled = false;
     }
   }
+
+  // --- SEJDA-STYLE NATIVE PDF EDITOR SUITE ---
+  async loadPdfForNativeEditor(files) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    this.nativeEditorFile = file;
+
+    document.getElementById("editorPdfFileName").innerText = `✓ Loaded: ${file.name}`;
+    document.getElementById("sejdaEditorWorkspace").style.display = "block";
+
+    this.editorAnnotations = {}; // page -> { texts: [], signatures: [], whiteouts: [] }
+    this.editorActiveTool = 'text';
+
+    try {
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+
+      const fileArrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: fileArrayBuffer });
+      this.nativePdfDoc = await loadingTask.promise;
+
+      this.renderNativePdfPages();
+      this.showToast("PDF document loaded into Native Sejda-Style Editor!");
+    } catch (e) {
+      console.error("PDF.js render error:", e);
+      alert("Could not render PDF preview: " + e.message);
+    }
+  }
+
+  async renderNativePdfPages() {
+    const container = document.getElementById("pdfViewportContainer");
+    container.innerHTML = "";
+
+    if (!this.nativePdfDoc) return;
+
+    for (let pageNum = 1; pageNum <= this.nativePdfDoc.numPages; pageNum++) {
+      const page = await this.nativePdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.25 });
+
+      const pageWrapper = document.createElement("div");
+      pageWrapper.className = "pdf-page-wrapper";
+      pageWrapper.style.position = "relative";
+      pageWrapper.style.margin = "0 auto";
+      pageWrapper.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5)";
+      pageWrapper.style.borderRadius = "8px";
+      pageWrapper.style.overflow = "hidden";
+      pageWrapper.dataset.pageNum = pageNum;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.display = "block";
+
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+      // Overlay layer for annotations
+      const overlayLayer = document.createElement("div");
+      overlayLayer.id = `pageOverlay_${pageNum}`;
+      overlayLayer.className = "pdf-overlay-layer";
+      overlayLayer.style.position = "absolute";
+      overlayLayer.style.top = "0";
+      overlayLayer.style.left = "0";
+      overlayLayer.style.width = `${viewport.width}px`;
+      overlayLayer.style.height = `${viewport.height}px`;
+      overlayLayer.style.cursor = "crosshair";
+
+      overlayLayer.onclick = (e) => this.handlePageOverlayClick(e, pageNum, viewport.width, viewport.height);
+
+      pageWrapper.appendChild(canvas);
+      pageWrapper.appendChild(overlayLayer);
+      container.appendChild(pageWrapper);
+
+      this.editorAnnotations[pageNum] = { texts: [], signatures: [], whiteouts: [] };
+    }
+  }
+
+  setEditorTool(toolName) {
+    this.editorActiveTool = toolName;
+    const tBtn = document.getElementById("toolBtnText");
+    const wBtn = document.getElementById("toolBtnWhiteout");
+    const fmtBar = document.getElementById("textFormatBar");
+
+    if (toolName === "text") {
+      tBtn.className = "btn-primary";
+      tBtn.style.background = "var(--accent-blue)";
+      wBtn.className = "btn-back";
+      fmtBar.style.display = "inline-flex";
+    } else if (toolName === "whiteout") {
+      tBtn.className = "btn-back";
+      tBtn.style.background = "";
+      wBtn.className = "btn-primary";
+      wBtn.style.background = "var(--accent-purple)";
+      fmtBar.style.display = "none";
+    }
+  }
+
+  handlePageOverlayClick(e, pageNum, renderW, renderH) {
+    if (e.target.classList.contains("annotation-item") || e.target.closest(".annotation-item")) return;
+
+    const overlay = document.getElementById(`pageOverlay_${pageNum}`);
+    const rect = overlay.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (this.editorActiveTool === "text") {
+      const color = document.getElementById("textColorPicker").value || "#0f172a";
+      const size = parseInt(document.getElementById("textSizePicker").value || "14", 10);
+      const textVal = prompt("Enter text to add to PDF:", "Sample Text");
+      if (textVal && textVal.trim()) {
+        const item = { x: x, y: y, text: textVal.trim(), size: size, color: color };
+        this.editorAnnotations[pageNum].texts.push(item);
+        this.renderAnnotationsOnOverlay(pageNum);
+      }
+    } else if (this.editorActiveTool === "whiteout") {
+      const item = { x: x, y: y, w: 140, h: 28 };
+      this.editorAnnotations[pageNum].whiteouts.push(item);
+      this.renderAnnotationsOnOverlay(pageNum);
+    }
+  }
+
+  renderAnnotationsOnOverlay(pageNum) {
+    const overlay = document.getElementById(`pageOverlay_${pageNum}`);
+    if (!overlay) return;
+    overlay.innerHTML = "";
+
+    const annos = this.editorAnnotations[pageNum];
+
+    // Render Whiteouts
+    annos.whiteouts.forEach((w, idx) => {
+      const div = document.createElement("div");
+      div.className = "annotation-item";
+      div.style.position = "absolute";
+      div.style.left = `${w.x}px`;
+      div.style.top = `${w.y}px`;
+      div.style.width = `${w.w}px`;
+      div.style.height = `${w.h}px`;
+      div.style.background = "#ffffff";
+      div.style.border = "1px dashed var(--accent-purple)";
+      div.style.borderRadius = "4px";
+
+      const delBtn = document.createElement("span");
+      delBtn.innerHTML = "&times;";
+      delBtn.style.position = "absolute";
+      delBtn.style.top = "-8px";
+      delBtn.style.right = "-8px";
+      delBtn.style.background = "#ef4444";
+      delBtn.style.color = "#fff";
+      delBtn.style.width = "16px";
+      delBtn.style.height = "16px";
+      delBtn.style.borderRadius = "50%";
+      delBtn.style.fontSize = "12px";
+      delBtn.style.display = "flex";
+      delBtn.style.alignItems = "center";
+      delBtn.style.justifyContent = "center";
+      delBtn.style.cursor = "pointer";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        annos.whiteouts.splice(idx, 1);
+        this.renderAnnotationsOnOverlay(pageNum);
+      };
+      div.appendChild(delBtn);
+      overlay.appendChild(div);
+    });
+
+    // Render Text Annotations
+    annos.texts.forEach((t, idx) => {
+      const div = document.createElement("div");
+      div.className = "annotation-item";
+      div.style.position = "absolute";
+      div.style.left = `${t.x}px`;
+      div.style.top = `${t.y}px`;
+      div.style.color = t.color;
+      div.style.fontSize = `${t.size}px`;
+      div.style.fontFamily = "Helvetica, Arial, sans-serif";
+      div.style.fontWeight = "600";
+      div.style.padding = "2px 6px";
+      div.style.background = "rgba(255,255,255,0.9)";
+      div.style.border = "1px solid var(--accent-blue)";
+      div.style.borderRadius = "4px";
+      div.style.cursor = "move";
+      div.innerText = t.text;
+
+      const delBtn = document.createElement("span");
+      delBtn.innerHTML = "&times;";
+      delBtn.style.position = "absolute";
+      delBtn.style.top = "-8px";
+      delBtn.style.right = "-8px";
+      delBtn.style.background = "#ef4444";
+      delBtn.style.color = "#fff";
+      delBtn.style.width = "16px";
+      delBtn.style.height = "16px";
+      delBtn.style.borderRadius = "50%";
+      delBtn.style.fontSize = "12px";
+      delBtn.style.display = "flex";
+      delBtn.style.alignItems = "center";
+      delBtn.style.justifyContent = "center";
+      delBtn.style.cursor = "pointer";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        annos.texts.splice(idx, 1);
+        this.renderAnnotationsOnOverlay(pageNum);
+      };
+      div.appendChild(delBtn);
+      overlay.appendChild(div);
+    });
+
+    // Render Signatures
+    annos.signatures.forEach((s, idx) => {
+      const div = document.createElement("div");
+      div.className = "annotation-item";
+      div.style.position = "absolute";
+      div.style.left = `${s.x}px`;
+      div.style.top = `${s.y}px`;
+      div.style.width = `${s.w}px`;
+      div.style.height = `${s.h}px`;
+      div.style.border = "1px dashed var(--accent-green)";
+      div.style.borderRadius = "4px";
+
+      const img = document.createElement("img");
+      img.src = s.image_data;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "contain";
+      div.appendChild(img);
+
+      const delBtn = document.createElement("span");
+      delBtn.innerHTML = "&times;";
+      delBtn.style.position = "absolute";
+      delBtn.style.top = "-8px";
+      delBtn.style.right = "-8px";
+      delBtn.style.background = "#ef4444";
+      delBtn.style.color = "#fff";
+      delBtn.style.width = "16px";
+      delBtn.style.height = "16px";
+      delBtn.style.borderRadius = "50%";
+      delBtn.style.fontSize = "12px";
+      delBtn.style.display = "flex";
+      delBtn.style.alignItems = "center";
+      delBtn.style.justifyContent = "center";
+      delBtn.style.cursor = "pointer";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        annos.signatures.splice(idx, 1);
+        this.renderAnnotationsOnOverlay(pageNum);
+      };
+      div.appendChild(delBtn);
+      overlay.appendChild(div);
+    });
+  }
+
+  // --- E-SIGNATURE MODAL CONTROLS ---
+  openSignaturePadModal() {
+    document.getElementById("signaturePadModal").style.display = "flex";
+    this.switchSigMode('draw');
+    setTimeout(() => this.initSigDrawingCanvas(), 100);
+  }
+
+  closeSignaturePadModal() {
+    document.getElementById("signaturePadModal").style.display = "none";
+  }
+
+  switchSigMode(mode) {
+    this.currentSigMode = mode;
+    const dBtn = document.getElementById("sigModeDrawBtn");
+    const tBtn = document.getElementById("sigModeTypeBtn");
+    const uBtn = document.getElementById("sigModeUploadBtn");
+
+    const dArea = document.getElementById("sigDrawArea");
+    const tArea = document.getElementById("sigTypeArea");
+    const uArea = document.getElementById("sigUploadArea");
+
+    dBtn.className = mode === 'draw' ? "btn-primary" : "btn-back";
+    if (mode === 'draw') dBtn.style.background = "var(--accent-green)"; else dBtn.style.background = "";
+
+    tBtn.className = mode === 'type' ? "btn-primary" : "btn-back";
+    if (mode === 'type') tBtn.style.background = "var(--accent-green)"; else tBtn.style.background = "";
+
+    uBtn.className = mode === 'upload' ? "btn-primary" : "btn-back";
+    if (mode === 'upload') uBtn.style.background = "var(--accent-green)"; else uBtn.style.background = "";
+
+    dArea.style.display = mode === 'draw' ? "block" : "none";
+    tArea.style.display = mode === 'type' ? "block" : "none";
+    uArea.style.display = mode === 'upload' ? "block" : "none";
+  }
+
+  initSigDrawingCanvas() {
+    const canvas = document.getElementById("sigCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#0f172a";
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => {
+      isDrawing = true;
+      const pos = getPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    };
+
+    const draw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastX = pos.x;
+      lastY = pos.y;
+    };
+
+    const stopDraw = () => { isDrawing = false; };
+
+    canvas.onmousedown = startDraw;
+    canvas.onmousemove = draw;
+    canvas.onmouseup = stopDraw;
+    canvas.onmouseleave = stopDraw;
+
+    canvas.ontouchstart = startDraw;
+    canvas.ontouchmove = draw;
+    canvas.ontouchend = stopDraw;
+  }
+
+  clearSigCanvas() {
+    const canvas = document.getElementById("sigCanvas");
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  renderTypedSignature() {
+    const val = document.getElementById("sigTypedText").value.trim();
+    document.getElementById("sigTypePreview").innerText = val || "Signature Preview";
+  }
+
+  handleSigImageUpload(files) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.uploadedSigB64 = e.target.result;
+      document.getElementById("sigUploadFileName").innerText = `✓ Selected: ${file.name}`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  stampSignatureOntoDocument() {
+    let sigDataUrl = "";
+
+    if (this.currentSigMode === 'draw') {
+      const canvas = document.getElementById("sigCanvas");
+      sigDataUrl = canvas.toDataURL("image/png");
+    } else if (this.currentSigMode === 'type') {
+      const val = document.getElementById("sigTypedText").value.trim();
+      if (!val) { alert("Please type your name for the signature!"); return; }
+      
+      const tCanvas = document.createElement("canvas");
+      tCanvas.width = 400;
+      tCanvas.height = 100;
+      const ctx = tCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 400, 100);
+      ctx.font = "italic 40px 'Brush Script MT', cursive, sans-serif";
+      ctx.fillStyle = "#0f172a";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(val, 200, 50);
+      sigDataUrl = tCanvas.toDataURL("image/png");
+    } else if (this.currentSigMode === 'upload') {
+      if (!this.uploadedSigB64) { alert("Please select a signature image first!"); return; }
+      sigDataUrl = this.uploadedSigB64;
+    }
+
+    if (sigDataUrl) {
+      const targetPage = 1;
+      this.editorAnnotations[targetPage].signatures.push({
+        x: 100, y: 150, w: 160, h: 60, image_data: sigDataUrl
+      });
+      this.renderAnnotationsOnOverlay(targetPage);
+      this.closeSignaturePadModal();
+      this.showToast("E-Signature stamped onto Page 1! Drag or click to adjust.");
+    }
+  }
+
+  clearEditorAnnotations() {
+    if (!this.editorAnnotations) return;
+    for (const pageNum in this.editorAnnotations) {
+      this.editorAnnotations[pageNum] = { texts: [], signatures: [], whiteouts: [] };
+      this.renderAnnotationsOnOverlay(pageNum);
+    }
+    this.showToast("Cleared all annotations.");
+  }
+
+  async applyAndExportEditedPdf() {
+    if (!this.nativeEditorFile) {
+      alert("No PDF file loaded!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", this.nativeEditorFile);
+    formData.append("output_name", `Edited_${this.nativeEditorFile.name}`);
+    formData.append("annotations", JSON.stringify(this.editorAnnotations));
+
+    try {
+      const res = await fetch("/api/edit_pdf_standalone", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`PDF exported successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Export Error: " + data.message);
+      }
+    } catch (e) {
+      alert("PDF Export Exception: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();
+
