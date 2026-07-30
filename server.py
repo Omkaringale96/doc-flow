@@ -792,9 +792,15 @@ class ApiAddUserHandler(BaseHandler):
                 })
                 return
 
-            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
-            new_username = body.get("username", self.get_argument("username", default="")).strip()
-            new_password = body.get("password", self.get_argument("password", default="")).strip()
+            body = {}
+            if self.request.body:
+                try:
+                    body = json.loads(self.request.body.decode('utf-8'))
+                except Exception:
+                    body = {}
+
+            new_username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
+            new_password = (body.get("password") or body.get("passcode") or self.get_argument("password", default="") or self.get_body_argument("password", default="") or self.get_body_argument("passcode", default="")).strip()
 
             if not new_username or not new_password:
                 self.set_status(400)
@@ -836,8 +842,14 @@ class ApiRemoveUserHandler(BaseHandler):
                 })
                 return
 
-            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
-            target_username = body.get("username", self.get_argument("username", default="")).strip()
+            body = {}
+            if self.request.body:
+                try:
+                    body = json.loads(self.request.body.decode('utf-8'))
+                except Exception:
+                    body = {}
+
+            target_username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
 
             if not target_username:
                 self.set_status(400)
