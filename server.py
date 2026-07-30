@@ -32,6 +32,7 @@ import numpy as np
 from PIL import Image, ImageOps, ExifTags
 import requests
 import pypdf
+import fitz
 import tornado.ioloop
 import tornado.web
 
@@ -1555,6 +1556,208 @@ class ApiMergePdfsHandler(BaseHandler):
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
+# --- SMART PDF AUTO-FILL ENGINE ---
+def detect_pdf_blanks(pdf_path):
+    doc = fitz.open(pdf_path)
+    detected_fields = []
+    
+    for page_idx, page in enumerate(doc):
+        words = page.get_text("words")
+        lines_map = {}
+        for w in words:
+            line_no = w[6]
+            if line_no not in lines_map:
+                lines_map[line_no] = []
+            lines_map[line_no].append(w)
+
+        sorted_line_nos = sorted(lines_map.keys())
+
+        for l_idx, l_no in enumerate(sorted_line_nos):
+            line_words = lines_map[l_no]
+            for w_i, w in enumerate(line_words):
+                w_str = w[4]
+                if '_' in w_str and len(w_str.replace('_', '')) < 3:
+                    x0, y0, x1, y1 = w[0], w[1], w[2], w[3]
+
+                    preceding_words = [w_prev[4] for w_prev in line_words[:w_i]]
+                    preceding_text = " ".join(preceding_words).strip()
+
+                    prev_line_text = ""
+                    if l_idx > 0:
+                        prev_line_no = sorted_line_nos[l_idx - 1]
+                        prev_line_text = " ".join([w_prev[4] for w_prev in lines_map[prev_line_no]]).strip()
+
+                    full_context = f"{prev_line_text} {preceding_text}".strip()
+
+                    # Exclude signature lines
+                    if any(sig_term in full_context.lower() for sig_term in ["sincerely", "best regards", "regards,", "signature"]):
+                        continue
+
+                    label = "Blank Field"
+                    ctx_lower = full_context.lower()
+
+                    if "date" in ctx_lower:
+                        if "acceptance" in ctx_lower or page_idx == 1:
+                            label = "Acceptance Date"
+                        else:
+                            label = "Date"
+                    elif "dear" in ctx_lower or "i," in ctx_lower or "pharmacist" in ctx_lower:
+                        label = "Pharmacist Name"
+                    elif "effective from" in ctx_lower or "joining" in ctx_lower:
+                        label = "Joining Date / Effective Date"
+                    elif "proprietor" in ctx_lower or "medical" in ctx_lower or "store" in ctx_lower:
+                        label = "Medical Store / Proprietor Name"
+                    elif "to" in ctx_lower:
+                        label = "Addressee / Store Details"
+
+                    key = re.sub(r'[^a-z0-9_]', '', label.lower().replace(' ', '_'))
+                    if not key:
+                        key = f"field_{page_idx}_{l_no}_{w_i}"
+
+                    detected_fields.append({
+                        "key": key,
+                        "label": label,
+                        "page": page_idx + 1,
+                        "rect": [x0, y0, x1, y1],
+                        "context": full_context
+                    })
+
+    doc.close()
+
+    unique_fields = []
+    seen_keys = set()
+    for f in detected_fields:
+        if f["key"] not in seen_keys:
+            seen_keys.add(f["key"])
+            unique_fields.append({
+                "key": f["key"],
+                "label": f["label"],
+                "occurrences": len([x for x in detected_fields if x["key"] == f["key"]])
+            })
+
+    return {
+        "all_fields": detected_fields,
+        "unique_fields": unique_fields
+    }
+
+
+def auto_fill_pdf(pdf_path, output_path, detected_fields, field_values, max_kb=125):
+    doc = fitz.open(pdf_path)
+
+    for field in detected_fields:
+        key = field["key"]
+        val = str(field_values.get(key, "")).strip()
+        if not val:
+            continue
+
+        page_idx = field["page"] - 1
+        if page_idx < 0 or page_idx >= len(doc):
+            continue
+
+        page = doc[page_idx]
+        rect = fitz.Rect(field["rect"])
+
+        padded_rect = fitz.Rect(rect.x0 - 1, rect.y0 - 2, rect.x1 + 1, rect.y1 + 2)
+        page.draw_rect(padded_rect, color=(1, 1, 1), fill=(1, 1, 1))
+
+        avail_width = rect.width
+        fontsize = 11
+        estimated_width = len(val) * 6.0
+        if estimated_width > avail_width and avail_width > 20:
+            fontsize = max(8, int(11 * (avail_width / estimated_width)))
+
+        text_pos = fitz.Point(rect.x0 + 2, rect.y1 - 2)
+        page.insert_text(text_pos, val, fontsize=fontsize, fontname="helv", color=(0.06, 0.09, 0.16))
+
+    temp_filled = output_path + ".raw.pdf"
+    doc.save(temp_filled)
+    doc.close()
+
+    process_pdf_document([temp_filled], output_path, max_kb=max_kb)
+    if os.path.exists(temp_filled):
+        os.remove(temp_filled)
+
+
+class ApiDetectPdfBlanksHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            files = self.request.files.get("file", [])
+            if not files:
+                self.set_status(400)
+                self.write({"status": "error", "message": "No template PDF uploaded"})
+                return
+
+            job_id = uuid.uuid4().hex[:8]
+            job_output_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_output_dir, exist_ok=True)
+
+            template_path = os.path.join(job_output_dir, "template.pdf")
+            with open(template_path, "wb") as f_out:
+                f_out.write(files[0]['body'])
+
+            res_data = detect_pdf_blanks(template_path)
+            res_data["job_id"] = job_id
+            res_data["status"] = "success"
+
+            self.write(res_data)
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
+class ApiAutoFillPdfHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            job_id = self.get_body_argument("job_id", default="")
+            field_values_raw = self.get_body_argument("field_values", default="{}")
+            field_values = json.loads(field_values_raw) if field_values_raw else {}
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            job_dir = os.path.join(OUTPUT_DIR, job_id)
+            template_path = os.path.join(job_dir, "template.pdf")
+
+            if not os.path.exists(template_path):
+                files = self.request.files.get("file", [])
+                if files:
+                    job_id = uuid.uuid4().hex[:8]
+                    job_dir = os.path.join(OUTPUT_DIR, job_id)
+                    os.makedirs(job_dir, exist_ok=True)
+                    template_path = os.path.join(job_dir, "template.pdf")
+                    with open(template_path, "wb") as f_out:
+                        f_out.write(files[0]['body'])
+                else:
+                    self.set_status(400)
+                    self.write({"status": "error", "message": "Template PDF not found"})
+                    return
+
+            detection_res = detect_pdf_blanks(template_path)
+            out_path = os.path.join(job_dir, "AutoFilled_Document.pdf")
+
+            auto_fill_pdf(template_path, out_path, detection_res["all_fields"], field_values, max_kb=max_kb)
+
+            size_kb = os.path.getsize(out_path) / 1024.0
+            print(f"✅ Auto-filled PDF generated: {out_path} ({size_kb:.1f} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "PDF form auto-filled and generated successfully!",
+                "filename": "AutoFilled_Document.pdf",
+                "file_size_kb": round(size_kb, 1),
+                "download_url": f"/outputs/{job_id}/AutoFilled_Document.pdf"
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -1568,6 +1771,8 @@ def make_app():
         (r"/api/process_workflow", ApiProcessWorkflowHandler),
         (r"/api/edit_pdf_standalone", ApiEditPdfStandaloneHandler),
         (r"/api/merge_pdfs", ApiMergePdfsHandler),
+        (r"/api/detect_pdf_blanks", ApiDetectPdfBlanksHandler),
+        (r"/api/autofill_pdf", ApiAutoFillPdfHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)

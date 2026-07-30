@@ -1653,6 +1653,107 @@ class DocFlowApp {
       alert("Merge Exception: " + e.message);
     }
   }
+
+  // --- SMART PDF AUTO-FILL ENGINE METHODS ---
+  handleAutoFillTemplateSelected(files) {
+    if (!files || files.length === 0) return;
+    this.autoFillTemplateFile = files[0];
+    this.showToast(`Selected template: ${files[0].name}. Click Auto-Detect Fields!`);
+  }
+
+  async detectPdfBlanks() {
+    if (!this.autoFillTemplateFile) {
+      alert("Please upload a template PDF file first!");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", this.autoFillTemplateFile);
+
+    this.showToast("Analyzing PDF template for blank fields & placeholders...");
+
+    try {
+      const res = await fetch("/api/detect_pdf_blanks", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        this.autoFillJobId = data.job_id;
+        this.autoFillDetectedData = data;
+
+        this.renderAutoFillInputsGrid(data.unique_fields);
+        document.getElementById("autoFillDynamicFormArea").style.display = "block";
+        this.showToast(`Auto-detected ${data.unique_fields.length} unique blank field(s)! Form ready below.`);
+      } else {
+        alert("Detection Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Detection Exception: " + e.message);
+    }
+  }
+
+  renderAutoFillInputsGrid(uniqueFields) {
+    const grid = document.getElementById("autoFillInputFieldsGrid");
+    if (!grid) return;
+
+    grid.innerHTML = uniqueFields.map(f => {
+      const inputType = f.key.includes("date") ? "date" : "text";
+      const occBadge = f.occurrences > 1 ? `<span style="font-size:0.7rem; color: var(--accent-blue); margin-left: 0.4rem;">(Populates ${f.occurrences} places)</span>` : "";
+
+      return `
+        <div class="form-group" style="margin-bottom: 0.6rem;">
+          <label style="font-size: 0.8rem; font-weight: 600;">
+            ${f.label} ${occBadge}
+          </label>
+          <input type="${inputType}" id="autofill_input_${f.key}" data-key="${f.key}" class="autofill-field-input" placeholder="Enter ${f.label}..." style="font-size: 0.85rem; width: 100%;">
+        </div>
+      `;
+    }).join("");
+  }
+
+  async generateAutoFilledPdf() {
+    if (!this.autoFillJobId || !this.autoFillDetectedData) {
+      alert("Please detect fields first!");
+      return;
+    }
+
+    const inputs = document.querySelectorAll(".autofill-field-input");
+    const fieldValues = {};
+
+    inputs.forEach(input => {
+      const key = input.dataset.key;
+      const val = input.value.trim();
+      if (val) {
+        fieldValues[key] = val;
+      }
+    });
+
+    const formData = new FormData();
+    formData.append("job_id", this.autoFillJobId);
+    formData.append("field_values", JSON.stringify(fieldValues));
+    formData.append("max_kb", "125");
+
+    this.showToast("Generating auto-filled PDF with exact formatting preservation...");
+
+    try {
+      const res = await fetch("/api/autofill_pdf", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`Auto-filled PDF created successfully (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Generation Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Generation Exception: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

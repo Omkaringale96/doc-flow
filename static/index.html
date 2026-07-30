@@ -302,6 +302,50 @@
         <div id="mergeFilesSelectedList" style="font-size: 0.78rem; color: var(--text-muted);"></div>
       </div>
 
+      <!-- Smart PDF Auto-Fill Form Engine Card -->
+      <div id="pdfAutoFillToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-purple);">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Smart PDF Auto-Fill Form Engine
+        </h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Upload any template PDF (Appointment Letter, Acceptance Letter, Self Declaration, Affidavit). The engine automatically detects blank fields, deduplicates values, and fills the document while preserving 100% of original formatting.
+        </p>
+
+        <!-- Template Upload & Detect Step -->
+        <div id="autoFillUploadStep" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
+          <div style="flex: 1; min-width: 250px;">
+            <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Upload Template PDF (with blanks):</label>
+            <input type="file" id="autoFillTemplateInput" accept="application/pdf" style="font-size: 0.85rem;" onchange="docFlowApp.handleAutoFillTemplateSelected(this.files)">
+          </div>
+
+          <div style="align-self: flex-end;">
+            <button type="button" class="btn-primary" onclick="docFlowApp.detectPdfBlanks()" style="padding: 0.55rem 1.2rem; font-size: 0.88rem; background: var(--accent-purple);">
+              <i class="fa-solid fa-brain"></i> Auto-Detect Fields
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Form Fields Area (Rendered after detection) -->
+        <div id="autoFillDynamicFormArea" style="display: none; background: rgba(15, 23, 42, 0.6); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-glass); margin-top: 1rem;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-list-check"></i> Fill Required Template Information
+          </h4>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Duplicate fields (like Pharmacist Name) are deduplicated and will populate every occurrence automatically. Signature lines are kept blank.
+          </p>
+
+          <div id="autoFillInputFieldsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1.2rem;">
+            <!-- Dynamically generated inputs -->
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
+            <button type="button" class="btn-primary" onclick="docFlowApp.generateAutoFilledPdf()" style="padding: 0.6rem 1.5rem; font-size: 0.9rem; background: var(--accent-green);">
+              <i class="fa-solid fa-file-export"></i> Generate Auto-Filled PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- PDF Studio Main Workspace (3-Column Layout) -->
       <div id="pdfStudioWorkspace" style="display: none;">
         
