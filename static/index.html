@@ -27,15 +27,21 @@
         </button>
       </div>
 
-      <div class="user-pill">
-        <i class="fa-solid fa-circle-user"></i>
-        <span>Datta (Officer)</span>
+      <div class="user-pill" id="userPillContainer" style="display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-circle-user" style="color: var(--accent-green);"></i>
+        <span id="loggedInUserLabel" style="font-weight: 700;">Datta (Officer)</span>
+        <button type="button" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-blue);" onclick="docFlowApp.openAddMemberModal()">
+          <i class="fa-solid fa-user-plus"></i> Add Member
+        </button>
+        <button type="button" class="btn-back" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.logout()">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
       </div>
     </div>
   </nav>
 
   <!-- Main Container -->
-  <main class="main-container">
+  <main class="main-container" id="mainAppContent">
 
     <!-- SERVICES TAB -->
     <section id="servicesTab">
@@ -99,229 +105,257 @@
               <label>Applicant Full Name</label>
               <input type="text" id="applicantName" placeholder="e.g. Vinayak Ramesh Patil" value="VINAYAK RAMESH PATIL">
             </div>
+
             <div class="form-group">
               <label>Pharmacy Registration Number</label>
-              <input type="text" id="applicantRegNumber" placeholder="e.g. 189423" value="189423">
+              <input type="text" id="regNumber" placeholder="e.g. 189423" value="189423">
             </div>
-            <div class="form-group">
-              <label style="display: flex; justify-content: space-between; align-items: center;">
-                <span>MSPC Portal Login ID</span>
-                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; color: var(--accent-purple);" onclick="docFlowApp.openMspcPortalRedirectModal()">
-                  <i class="fa-solid fa-arrow-up-right-from-square"></i> Open MSPC Portal & Quick Copy
-                </button>
-              </label>
-              <input type="text" id="applicantLoginId" placeholder="e.g. MSPC189423" value="MSPC189423">
-            </div>
+
             <div class="form-group">
               <label>Date of Birth (DD/MM/YYYY)</label>
-              <input type="text" id="applicantDob" placeholder="21/06/2004" value="21/06/2004">
+              <input type="text" id="applicantDob" placeholder="DD/MM/YYYY" value="21/06/2004">
             </div>
+
             <div class="form-group">
-              <label>Mobile Number</label>
-              <input type="tel" id="applicantMobile" placeholder="9876543210" value="9876543210">
+              <label>Registered Mobile Number</label>
+              <input type="text" id="applicantMobile" placeholder="e.g. 9876543210" value="9876543210">
             </div>
+
             <div class="form-group">
-              <label>Email Address</label>
-              <input type="email" id="applicantEmail" placeholder="applicant@gmail.com" value="vinayak@gmail.com">
+              <label>Registered Email ID</label>
+              <input type="email" id="applicantEmail" placeholder="e.g. vinayak@gmail.com" value="vinayak@gmail.com">
             </div>
+
             <div class="form-group">
-              <label>Target Output Folder Name</label>
-              <input type="text" id="folderNameInput" placeholder="Vinayak_Patil_PPP_Renewal" value="Vinayak_Patil_PPP_Renewal">
-            </div>
-          </div>
-        </div>
-
-        <!-- Process Action Button (Only visible after upload completion) -->
-        <div id="processActionBox" style="margin-top: 2rem; text-align: center; display: none;">
-          <button class="btn-primary" id="startProcessBtn" onclick="docFlowApp.processWorkflow()">
-            <i class="fa-solid fa-file-zipper"></i> Process & Generate ZIP File
-          </button>
-        </div>
-
-        <!-- Animated Progress Tracker -->
-        <div class="step-tracker" id="stepTracker" style="display: none;">
-          <div class="step-item" id="step1">1. MSPC Login & Password Calc</div>
-          <div class="step-item" id="step2">2. Orientation (0° Default)</div>
-          <div class="step-item" id="step3">3. Image Deblur Filter</div>
-          <div class="step-item" id="step4">4. Resize Photo & Sign</div>
-          <div class="step-item" id="step5">5. Strict Compression</div>
-          <div class="step-item" id="step6">6. Output ZIP File Generation</div>
-        </div>
-
-        <!-- Processing Status Text -->
-        <div id="progressStatusText" style="text-align: center; margin-top: 1rem; color: var(--accent-blue); font-weight: 600;"></div>
-
-        <!-- Results Section (Direct ZIP Download Card) -->
-        <div id="resultsSection" style="display: none; margin-top: 2rem;">
-          
-          <!-- MSPC Portal Password & Account Helper Card (Strictly Ordered: Name -> Login ID -> Pass -> Others -> Date) -->
-          <div class="doc-card" id="mspcCard" style="border: 2px solid var(--accent-purple); background: rgba(139, 92, 246, 0.08); margin-bottom: 1.5rem; display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
-              <h3 style="color: var(--accent-purple); font-weight: 700; font-size: 1.15rem;">
-                <i class="fa-solid fa-key"></i> MSPC Portal Credentials (online.mspcindia.org)
-              </h3>
-              <button class="btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));" onclick="docFlowApp.openMspcPortalRedirectModal()">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open MSPC Portal & Quick Copy
-              </button>
+              <label>MSPC Portal Login ID</label>
+              <input type="text" id="applicantLoginId" placeholder="Auto-generated Login ID" value="19711112164170">
             </div>
 
-            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
-              <div style="padding: 0.7rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">APPLICANT NAME</div>
-                <div id="mspcApplicantName" style="font-size: 1rem; font-weight: 700; color: var(--text-bright);">VINAYAK RAMESH PATIL</div>
-              </div>
-
-              <div style="padding: 0.7rem; background: rgba(59, 130, 246, 0.12); border-radius: 6px; border: 1px solid var(--accent-blue);">
-                <div style="font-size: 0.75rem; color: var(--accent-blue); font-weight: 700;">MSPC LOGIN ID</div>
-                <div id="mspcLoginId" style="font-size: 1.2rem; font-weight: 900; color: var(--accent-blue); letter-spacing: 1px;">MSPC189423</div>
-              </div>
-
-              <div style="padding: 0.7rem; background: rgba(34, 197, 94, 0.12); border-radius: 6px; border: 1px solid var(--accent-green);">
-                <div style="font-size: 0.75rem; color: var(--accent-green); font-weight: 700;">MSPC PASSWORD</div>
-                <div id="mspcPass" style="font-size: 1.2rem; font-weight: 900; color: var(--accent-green); letter-spacing: 1px;">VIN2106</div>
-              </div>
-
-              <div style="padding: 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">REGISTRATION NUMBER</div>
-                <div id="mspcRegNo" style="font-size: 1rem; font-weight: 700; color: var(--text-bright);">189423</div>
-              </div>
-
-              <div style="padding: 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">DATE OF BIRTH</div>
-                <div id="mspcDob" style="font-size: 1rem; font-weight: 700; color: var(--text-bright);">21/06/2004</div>
-              </div>
-
-              <div style="padding: 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">REGISTERED MOBILE</div>
-                <div id="mspcMobile" style="font-size: 1rem; font-weight: 700; color: var(--text-bright);">9876543210</div>
-              </div>
-
-              <div style="padding: 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">REGISTERED EMAIL</div>
-                <div id="mspcEmail" style="font-size: 1rem; font-weight: 700; color: var(--text-bright);">vinayak@gmail.com</div>
-              </div>
-
-              <div style="padding: 0.6rem; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border-glass);">
-                <div style="font-size: 0.75rem; color: var(--text-muted);">GENERATED DATE</div>
-                <div id="mspcGenDate" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-blue);">30/07/2026 02:26:00</div>
-              </div>
+            <div class="form-group">
+              <label>Folder Name for Download Archive</label>
+              <input type="text" id="folderName" placeholder="e.g. VINAYAK_PPP_Renewal" value="VINAYAK_PPP_Renewal">
             </div>
           </div>
 
-          <!-- Direct Primary ZIP File Download Card -->
-          <div class="doc-card" style="border-color: var(--accent-green); text-align: center; padding: 2.5rem 1.5rem;">
-            <div style="margin-bottom: 1.2rem;">
-              <i class="fa-solid fa-file-zipper" style="font-size: 3.5rem; color: var(--accent-green); margin-bottom: 0.8rem;"></i>
-              <h2 style="color: var(--text-bright); font-weight: 800; font-size: 1.5rem;">
-                ZIP File Generated Successfully!
-              </h2>
-              <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.4rem;" id="zipFileDetails">
-                All processed documents (Old_PPP_Card.pdf, Registration_Certificate.pdf, Aadhaar.pdf, Passport_Photo.jpg, Signature.jpg, Details.txt) have been bundled into your ZIP file.
-              </p>
+          <!-- Generated Documents Summary -->
+          <div style="margin-top: 1.5rem;">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem; color: var(--text-bright);">
+              <i class="fa-solid fa-folder-tree" style="color: var(--accent-blue);"></i> Output Document Files Included in Package
+            </h4>
+            <div class="summary-list" id="docSummaryList">
+              <!-- Rendered per workflow -->
             </div>
+          </div>
 
-            <div style="margin-top: 1.8rem;">
-              <a href="#" id="mainZipDownloadBtn" download class="btn-primary" style="font-size: 1.15rem; padding: 0.9rem 2.2rem; background: linear-gradient(135deg, var(--accent-green), #16a34a); text-decoration: none; display: inline-flex; align-items: center; gap: 0.8rem; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4); border-radius: 8px;">
-                <i class="fa-solid fa-download" style="font-size: 1.3rem;"></i> <span id="zipBtnLabel">Download ZIP File</span>
-              </a>
+          <!-- Actions & MSPC Quick Redirect Button -->
+          <div class="action-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn-primary" id="processBtn" onclick="docFlowApp.processWorkflow()" style="flex: 1; padding: 0.9rem; font-size: 1.05rem;">
+              <i class="fa-solid fa-file-zipper"></i> Process & Generate ZIP File
+            </button>
+            <button class="btn-back" onclick="docFlowApp.openMspcRedirectModal()" style="border-color: var(--accent-purple); color: var(--accent-purple);">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> MSPC Login Helper
+            </button>
+          </div>
+        </div>
+
+        <!-- Processing Loader -->
+        <div id="processingCard" class="doc-card" style="display: none; margin-top: 1.5rem; text-align: center; padding: 2rem;">
+          <i class="fa-solid fa-gear fa-spin" style="font-size: 2.5rem; color: var(--accent-blue); margin-bottom: 1rem;"></i>
+          <h3 id="processStatusText">Processing Documents & Compiling ZIP File Archive...</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Executing image deblur, scaling to portal limits, calculating MSPC password, and compressing output ZIP...</p>
+        </div>
+
+        <!-- Success Results Card (ZIP Archive Download) -->
+        <div id="resultCard" class="doc-card" style="display: none; margin-top: 1.5rem; border-color: var(--accent-green);">
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: var(--accent-green);"></i>
+            <h3 style="font-size: 1.4rem; font-weight: 700; margin-top: 0.5rem; color: var(--text-bright);">
+              Workflow Completed & Package ZIP File Ready!
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">All documents compressed under exact limits & Details.txt generated.</p>
+          </div>
+
+          <!-- Direct ZIP File Download Banner -->
+          <div id="zipDownloadBanner" style="background: rgba(34, 197, 94, 0.1); border: 2px solid var(--accent-green); border-radius: 10px; padding: 1.2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <h4 id="zipFileNameLabel" style="font-size: 1.1rem; font-weight: 700; color: var(--accent-green);">
+                <i class="fa-solid fa-file-zipper"></i> Document_Package.zip
+              </h4>
+              <span id="zipFileSizeLabel" style="font-size: 0.85rem; color: var(--text-muted);">Package Size: 84.5 KB</span>
             </div>
+            <a id="zipDownloadBtn" href="#" download class="btn-primary" style="background: var(--accent-green); text-decoration: none; padding: 0.75rem 1.5rem; font-size: 1rem; border-radius: 8px;">
+              <i class="fa-solid fa-download"></i> Download ZIP File
+            </a>
+          </div>
+
+          <!-- MSPC Credentials & Details Card -->
+          <div style="background: var(--bg-card); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; border: 1px solid var(--border-glass);">
+            <h4 style="font-size: 1rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.8rem;">
+              <i class="fa-solid fa-key"></i> MSPC Portal Login Credentials
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.8rem; font-size: 0.88rem;">
+              <div><strong>Applicant Name:</strong> <span id="resApplicantName"></span></div>
+              <div><strong>Login ID:</strong> <span id="resLoginId"></span></div>
+              <div><strong>Calculated Password:</strong> <span id="resMspcPass" style="color: var(--accent-green); font-weight: 700;"></span></div>
+              <div><strong>Reg Number:</strong> <span id="resRegNo"></span></div>
+              <div><strong>Date of Birth:</strong> <span id="resDob"></span></div>
+              <div><strong>Mobile:</strong> <span id="resMobile"></span></div>
+              <div><strong>Email:</strong> <span id="resEmail"></span></div>
+              <div><strong>Generated Date:</strong> <span id="resGenDate"></span></div>
+            </div>
+          </div>
+
+          <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--text-bright);">Processed Files Summary</h4>
+          <div id="processedFilesList" class="summary-list">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div style="margin-top: 1.5rem; text-align: center;">
+            <button class="btn-back" onclick="docFlowApp.showHome()">
+              <i class="fa-solid fa-plus"></i> Process Another Applicant Document Package
+            </button>
           </div>
         </div>
 
       </div>
     </section>
 
-    <!-- PDF EDITOR TAB -->
+    <!-- STANDALONE PDF EDITOR TAB -->
     <section id="pdfEditorTab" style="display: none;">
       <div class="hero-header">
-        <h1>Standalone PDF Utility Toolkit</h1>
-        <p>Direct manual tools for standalone PDF actions outside workflows.</p>
+        <h1>Standalone Multi-Page PDF Utility Engine</h1>
+        <p>Merge multiple images into a single PDF, rotate pages, auto-deblur, and compress strictly below your target KB limit.</p>
       </div>
 
-      <div class="services-grid">
-        <div class="service-card" onclick="docFlowApp.openPdfTool('merge')">
-          <div class="service-icon"><i class="fa-solid fa-object-group"></i></div>
-          <h3>Merge PDFs</h3>
-          <p>Combine multiple PDFs into a single compliant document.</p>
+      <div class="doc-card" style="max-width: 800px; margin: 0 auto;">
+        <h3><i class="fa-solid fa-file-pdf" style="color: var(--accent-blue);"></i> Create Custom PDF Package</h3>
+        
+        <div class="form-group" style="margin-top: 1rem;">
+          <label>Target File Name</label>
+          <input type="text" id="pdfCustomName" value="Custom_Document.pdf">
         </div>
-        <div class="service-card" onclick="docFlowApp.openPdfTool('split')">
-          <div class="service-icon" style="background: rgba(139, 92, 246, 0.12); color: var(--accent-purple);"><i class="fa-solid fa-scissors"></i></div>
-          <h3>Split PDF</h3>
-          <p>Extract specific page ranges into individual PDFs.</p>
-        </div>
-        <div class="service-card" onclick="docFlowApp.openPdfTool('compress')">
-          <div class="service-icon" style="background: rgba(34, 197, 94, 0.12); color: var(--accent-green);"><i class="fa-solid fa-compress"></i></div>
-          <h3>Compress PDF</h3>
-          <p>Reduce standalone PDF size below government limits.</p>
-        </div>
-        <div class="service-card" onclick="docFlowApp.openPdfTool('rotate')">
-          <div class="service-icon" style="background: rgba(245, 158, 11, 0.12); color: var(--accent-amber);"><i class="fa-solid fa-rotate"></i></div>
-          <h3>Rotate PDF Pages</h3>
-          <p>Manually fix single page PDF orientations.</p>
-        </div>
-      </div>
 
-      <!-- Editor Tool Workspace -->
-      <div id="editorWorkspace" class="doc-card" style="display: none; margin-top: 2rem;">
-        <h3 id="editorToolTitle">PDF Tool</h3>
-        <div class="doc-upload-box" style="margin-top: 1rem;" onclick="document.getElementById('editorFileInput').click()">
-          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--accent-blue);"></i>
-          <p id="editorFileLabel">Click or Drag PDF Files Here</p>
-          <input type="file" id="editorFileInput" multiple style="display:none;" onchange="docFlowApp.handleEditorFiles(this)">
+        <div class="form-group">
+          <label>Max Target File Size (KB)</label>
+          <input type="number" id="pdfCustomMaxKb" value="100">
         </div>
-        <div style="margin-top: 1rem; text-align: center;">
-          <button class="btn-primary" onclick="docFlowApp.runPdfEditorAction()">Execute Action</button>
+
+        <div class="drop-zone" id="pdfDropZone" onclick="document.getElementById('pdfCustomFiles').click()">
+          <i class="fa-solid fa-file-circle-plus" style="font-size: 2.5rem; color: var(--accent-blue); margin-bottom: 0.8rem;"></i>
+          <p style="font-weight: 600;">Click to select multiple images/documents</p>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Supports JPG, PNG, WEBP, PDF</p>
+          <input type="file" id="pdfCustomFiles" multiple accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handlePdfCustomFiles(this.files)">
         </div>
-        <div id="editorStatus" style="margin-top: 1rem; text-align: center; color: var(--accent-blue);"></div>
-        <div id="editorOutputArea" style="display: none; margin-top: 1rem; text-align: center;">
-          <a href="#" id="editorDownloadBtn" class="btn-primary" style="text-decoration: none;">
-            <i class="fa-solid fa-download"></i> Download Processed PDF
-          </a>
+
+        <div id="pdfCustomFileList" style="margin-top: 1rem;"></div>
+
+        <div style="margin-top: 1.5rem; text-align: right;">
+          <button class="btn-primary" onclick="docFlowApp.buildCustomPdf()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate & Download PDF
+          </button>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ========================================================================== -->
-  <!-- MODAL: MSPC PORTAL DIRECT REDIRECT & DEDICATED EMAIL QUICK COPY HELPER MODAL -->
-  <!-- ========================================================================== -->
-  <div id="mspcRedirectModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card" style="max-width: 620px;">
+  <!-- MODAL: LOGIN INTERFACE (AUTHENTICATION OVERLAY) -->
+  <div id="loginModalContainer" class="modal-backdrop" style="display: flex;">
+    <div class="modal-card" style="max-width: 440px; border-color: var(--accent-blue); text-align: center; padding: 2.2rem 1.8rem;">
+      
+      <div style="margin-bottom: 1.2rem;">
+        <div style="width: 64px; height: 64px; background: rgba(59, 130, 246, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem;">
+          <i class="fa-solid fa-shield-halved" style="font-size: 2rem; color: var(--accent-blue);"></i>
+        </div>
+        <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-bright);">Authorized Officer Login</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+          DocFlow Pro Portal is strictly restricted to authorized members only.
+        </p>
+      </div>
+
+      <div id="loginErrorMsg" style="display: none; padding: 0.6rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; color: #ef4444; font-size: 0.82rem; margin-bottom: 1rem;"></div>
+
+      <form onsubmit="docFlowApp.handleLogin(event)" style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="font-size: 0.85rem; font-weight: 600;">Username</label>
+          <input type="text" id="loginUsername" placeholder="Authorized Username" value="Datta" required style="font-size: 0.95rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label style="font-size: 0.85rem; font-weight: 600;">Password</label>
+          <input type="password" id="loginPassword" placeholder="Authorized Password" value="555" required style="font-size: 0.95rem;">
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; font-weight: 700;">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD AUTHORIZED MEMBER MODAL -->
+  <div id="addMemberModalContainer" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 460px; border-color: var(--accent-purple);">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent-purple);"></i> MSPC Portal Direct Quick Copy Helper</h3>
+        <h3><i class="fa-solid fa-user-plus" style="color: var(--accent-purple);"></i> Add Authorized Member</h3>
+        <button class="btn-close" onclick="docFlowApp.closeAddMemberModal()">&times;</button>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Only existing logged-in authorized members can register new members.
+      </p>
+
+      <div id="addMemberMsg" style="display: none; padding: 0.6rem; border-radius: 6px; font-size: 0.82rem; margin-bottom: 1rem;"></div>
+
+      <form onsubmit="docFlowApp.handleAddMember(event)">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="font-size: 0.85rem; font-weight: 600;">New Member Username</label>
+          <input type="text" id="newMemberUsername" placeholder="e.g. Officer_Ramesh" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.2rem;">
+          <label style="font-size: 0.85rem; font-weight: 600;">New Member Password</label>
+          <input type="password" id="newMemberPassword" placeholder="Set Password" required>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
+          <button type="button" class="btn-back" onclick="docFlowApp.closeAddMemberModal()">Cancel</button>
+          <button type="submit" class="btn-primary" style="background: var(--accent-purple);">
+            <i class="fa-solid fa-user-check"></i> Add Member
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MSPC LOGIN HELPER & QUICK COPY MODAL -->
+  <div id="mspcRedirectModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 520px; border-color: var(--accent-purple);">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent-purple);"></i> MSPC Portal Login Helper</h3>
         <button class="btn-close" onclick="docFlowApp.closeMspcRedirectModal()">&times;</button>
       </div>
 
-      <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 0.6rem; line-height: 1.4;">
-        DocFlow Pro has prepared all applicant details. Click below to open <code>online.mspcindia.org</code> and use 1-click quick copy for instant pasting!
-      </p>
+      <div style="margin-top: 1rem; font-size: 0.9rem;">
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">
+          Use the quick-copy buttons below to rapidly populate your details on the official MSPC Portal:
+        </p>
 
-      <div style="margin-top: 1rem; padding: 1.2rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-glass);">
-        <div style="text-align: center; margin-bottom: 1.2rem;">
-          <a href="https://online.mspcindia.org/ForgotLoginID.aspx" target="_blank" class="btn-primary" style="font-size: 1rem; padding: 0.7rem 1.4rem; background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Launch MSPC Portal (ForgotLoginID.aspx)
+        <div style="display: flex; gap: 0.8rem; margin-bottom: 1.2rem;">
+          <a href="https://online.mspcindia.org/" target="_blank" class="btn-primary" style="flex: 1; text-align: center; text-decoration: none; padding: 0.65rem;">
+            <i class="fa-solid fa-globe"></i> Open MSPC Main Portal
+          </a>
+          <a href="https://online.mspcindia.org/ForgotLoginID.aspx" target="_blank" class="btn-back" style="flex: 1; text-align: center; text-decoration: none; padding: 0.65rem; border-color: var(--accent-purple); color: var(--accent-purple);">
+            <i class="fa-solid fa-key"></i> Forgot Login ID Page
           </a>
         </div>
 
-        <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-bright); margin-bottom: 0.8rem;">
-          📋 1-Click Quick Copy Values for MSPC Portal:
-        </h4>
-
-        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: 6px;">
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Registration No:</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Pharmacy Reg Number:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <strong id="copyRegNo" style="font-size: 0.9rem;">189423</strong>
-              <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('copyRegNo').innerText)">Copy Reg No</button>
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.04); border-radius: 6px;">
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Full Name:</span>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong id="copyName" style="font-size: 0.9rem;">VINAYAK PATIL</strong>
-              <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantName').value)">Copy Name</button>
+              <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('regNumber').value)">Copy Reg</button>
             </div>
           </div>
 
@@ -341,7 +375,6 @@
             </div>
           </div>
 
-          <!-- DEDICATED QUICK COPY EMAIL SECTION -->
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 6px; border: 1px solid var(--accent-purple);">
             <span style="font-size: 0.8rem; color: var(--accent-purple); font-weight: 700;">Email Address:</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -374,7 +407,6 @@
         <button class="btn-close" onclick="docFlowApp.closeRotationModal()">&times;</button>
       </div>
 
-      <!-- Live Split Comparison -->
       <div class="split-comparison" style="display: flex; gap: 1rem; margin-top: 1rem;">
         <div style="flex: 1; text-align: center;">
           <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">RAW UPLOADED IMAGE</span>
@@ -391,7 +423,6 @@
         </div>
       </div>
 
-      <!-- Control Toolbar -->
       <div style="margin-top: 1.2rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-glass);">
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 0.8rem;">
           <button type="button" class="btn-back" onclick="docFlowApp.modalRotateAngle(-90)"><i class="fa-solid fa-rotate-left"></i> Rotate Left 90°</button>
@@ -399,7 +430,7 @@
           <button type="button" class="btn-back" onclick="docFlowApp.modalRotateAngle(180)"><i class="fa-solid fa-arrows-rotate"></i> Rotate 180°</button>
           <button type="button" class="btn-back" onclick="docFlowApp.modalFlip('h')"><i class="fa-solid fa-arrows-left-right"></i> Flip Horizontal</button>
           <button type="button" class="btn-back" onclick="docFlowApp.modalFlip('v')"><i class="fa-solid fa-arrows-up-down"></i> Flip Vertical</button>
-          <button type="button" class="btn-back" onclick="docFlowApp.modalToggleDebblur()"><i class="fa-solid fa-wand-magic-sparkles"></i> Toggle Image Deblur</button>
+          <button type="button" class="btn-back" onclick="docFlowApp.modalToggleDebblur()"><i class="fa-solid fa-wand-magic-sparkles"></i> Toggle Image Debblur</button>
           <button type="button" class="btn-back" onclick="docFlowApp.modalReset()"><i class="fa-solid fa-arrow-rotate-left"></i> Reset to 0°</button>
         </div>
 

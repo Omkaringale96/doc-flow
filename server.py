@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-DocFlow Pro - Production Web Server Engine
-==========================================
+DocFlow Pro - Production Web Server Engine with Member Authorization
+====================================================================
 Features:
-1. Resilient API handlers returning strictly JSON (no HTML error pages).
-2. Step-by-step progress logging with explicit stdout flushing.
-3. Fault-tolerant image/PDF processing with memory garbage collection.
-4. Non-blocking Cloudinary & Firestore logging integrations.
-5. Strict output directory and file existence verifications.
+1. Member Authentication & Admin Authorization Engine (Default user: Datta / 555).
+2. Authorized Member Management (Only logged-in members can add new members).
+3. Resilient API handlers returning strictly JSON (no HTML error pages).
+4. Step-by-step progress logging with explicit stdout flushing.
+5. Fault-tolerant image/PDF processing with memory garbage collection.
+6. Non-blocking Cloudinary & Firestore logging integrations.
 """
 
 import os
@@ -51,6 +52,45 @@ try:
 except Exception as e:
     print(f"⚠️ Cloudinary import note: {e}", flush=True)
 
+# Directory Setup
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
+LOG_FILE = os.path.join(BASE_DIR, "submissions_log.json")
+USERS_FILE = os.path.join(BASE_DIR, "users_db.json")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# ----------------------------------------------------------------------
+# Authorized Users Database & Management
+# ----------------------------------------------------------------------
+DEFAULT_USERS = {
+    "Datta": "555"
+}
+
+def load_users():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict) and data:
+                    return data
+        except Exception as e:
+            print(f"⚠️ Users file read error: {e}", flush=True)
+    save_users(DEFAULT_USERS)
+    return DEFAULT_USERS
+
+def save_users(users_dict):
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users_dict, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Users file write error: {e}", flush=True)
+
+USERS_DB = load_users()
+ACTIVE_SESSIONS = {}  # token -> {username, created_at}
 
 # EasyOCR setup (Lazy loaded)
 EASY_OCR_READER = None
@@ -67,17 +107,6 @@ def get_ocr_reader():
             print("⚠️ OCR Reader Initialization Note:", e, flush=True)
             EASY_OCR_READER = False
     return EASY_OCR_READER
-
-
-# Directory Setup
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
-LOG_FILE = os.path.join(BASE_DIR, "submissions_log.json")
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ----------------------------------------------------------------------
 # Workflow Registry Definition
@@ -201,10 +230,6 @@ def generate_mspc_password(name: str, dob_str: str) -> str:
 # Logging & External Upload Functions
 # --------------------------------------------------------
 def log_submission(entry):
-    """
-    Save submission locally and to Firestore safely without interrupting workflow.
-    """
-    # 1. Firestore Save
     if db is not None:
         try:
             db.collection("submissions").add({
@@ -217,7 +242,6 @@ def log_submission(entry):
     else:
         print("ℹ️ [FIRESTORE] Disabled or unconfigured, skipping remote DB log.", flush=True)
 
-    # 2. Local JSON File Log Save
     try:
         submissions = []
         if os.path.exists(LOG_FILE):
@@ -236,9 +260,6 @@ def log_submission(entry):
 
 
 def upload_to_cloudinary(file_path, folder="DocFlow"):
-    """
-    Upload a file to Cloudinary safely. Returns secure URL on success, or None on failure.
-    """
     if not file_path or not os.path.exists(file_path):
         print(f"⚠️ [CLOUDINARY] Target file {file_path} does not exist, skipping upload.", flush=True)
         return None
@@ -374,7 +395,6 @@ def process_signature_image(input_path, output_path, target_w=160, target_h=40, 
             break
         quality -= 10
 
-    # Cleanup memory
     del cv_img, gray, bg, norm, thresh, sig_pil, resized_sig, canvas
     gc.collect()
 
@@ -456,7 +476,6 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
         else:
             scale_factor *= 0.75
 
-    # Memory cleanup
     del images, temp_imgs
     gc.collect()
 
@@ -514,9 +533,6 @@ def process_image_document(input_path, output_path, target_w, target_h, max_kb=2
 # ----------------------------------------------------------------------
 class BaseHandler(tornado.web.RequestHandler):
     def write_error(self, status_code, **kwargs):
-        """
-        Override Tornado default HTML error handler to ALWAYS return clean JSON.
-        """
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         exc_info = kwargs.get("exc_info")
         error_msg = "An unexpected server error occurred."
@@ -534,6 +550,113 @@ class BaseHandler(tornado.web.RequestHandler):
             "traceback": tb_str
         }))
 
+    def get_current_user_name(self):
+        auth_header = self.request.headers.get("Authorization", "")
+        token = ""
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        elif self.get_argument("token", default=""):
+            token = self.get_argument("token")
+
+        if token in ACTIVE_SESSIONS:
+            return ACTIVE_SESSIONS[token]["username"]
+        return None
+
+# ----------------------------------------------------------------------
+# Member Authorization & Login API Handlers
+# ----------------------------------------------------------------------
+class ApiLoginHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            username = body.get("username", self.get_argument("username", default="")).strip()
+            password = body.get("password", self.get_argument("password", default="")).strip()
+
+            if not username or not password:
+                self.set_status(400)
+                self.write({"status": "error", "message": "Username and Password are required."})
+                return
+
+            users_db = load_users()
+            if username in users_db and users_db[username] == password:
+                token = uuid.uuid4().hex
+                ACTIVE_SESSIONS[token] = {
+                    "username": username,
+                    "created_at": datetime.now().isoformat()
+                }
+                print(f"✅ User '{username}' logged in successfully. Token: {token}", flush=True)
+                self.write({
+                    "status": "success",
+                    "message": f"Welcome back, {username}!",
+                    "token": token,
+                    "username": username
+                })
+            else:
+                self.set_status(401)
+                self.write({
+                    "status": "error",
+                    "message": "Invalid Authorized Username or Password!"
+                })
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiAddUserHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            current_user = self.get_current_user_name()
+            if not current_user:
+                self.set_status(403)
+                self.write({
+                    "status": "error",
+                    "message": "Unauthorized! Only existing authorized members can add new members."
+                })
+                return
+
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            new_username = body.get("username", self.get_argument("username", default="")).strip()
+            new_password = body.get("password", self.get_argument("password", default="")).strip()
+
+            if not new_username or not new_password:
+                self.set_status(400)
+                self.write({"status": "error", "message": "New username and password required."})
+                return
+
+            users_db = load_users()
+            if new_username in users_db:
+                self.set_status(400)
+                self.write({"status": "error", "message": f"Authorized member '{new_username}' already exists!"})
+                return
+
+            users_db[new_username] = new_password
+            save_users(users_db)
+
+            print(f"🔑 Authorized member '{current_user}' created new member '{new_username}'", flush=True)
+            self.write({
+                "status": "success",
+                "message": f"Authorized member '{new_username}' added successfully!",
+                "members_count": len(users_db)
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiCheckAuthHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        user = self.get_current_user_name()
+        if user:
+            self.write({"status": "success", "authenticated": True, "username": user})
+        else:
+            self.write({"status": "success", "authenticated": False})
+
 
 class MainHandler(BaseHandler):
     def get(self):
@@ -550,10 +673,6 @@ class ApiWorkflowsHandler(BaseHandler):
 
 
 class ApiExtractDocumentDataHandler(BaseHandler):
-    """
-    Multi-Field Auto-OCR Data Recognition.
-    Scans uploaded document image for Registration No, Name, DOB, Mobile, Email, and Aadhaar.
-    """
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
@@ -763,14 +882,12 @@ class ApiProcessWorkflowHandler(BaseHandler):
             job_id = uuid.uuid4().hex[:8]
             job_output_dir = os.path.join(OUTPUT_DIR, job_id, folder_name)
 
-            # Ensure output directories exist
             os.makedirs(job_output_dir, exist_ok=True)
             os.makedirs(UPLOAD_DIR, exist_ok=True)
             print(f"📁 [STEP 2] Job Output Directory Created: {job_output_dir}", flush=True)
 
             processed_files_summary = []
 
-            # Step 3: Process Documents
             print(f"📄 [STEP 3] Starting document processing for {len(workflow['documents'])} items...", flush=True)
 
             for idx_doc, doc_cfg in enumerate(workflow["documents"], start=1):
@@ -913,7 +1030,6 @@ class ApiProcessWorkflowHandler(BaseHandler):
 
             print("✅ [STEP 3 OK] All requested documents generated.", flush=True)
 
-            # Step 4: Generate Details.txt
             print("📝 [STEP 4] Generating Details.txt...", flush=True)
             mspc_password = generate_mspc_password(applicant_name, dob)
             current_date_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
@@ -942,7 +1058,6 @@ Generated Date        : {current_date_str}
                 })
                 print("✅ [STEP 4 OK] Details.txt created.", flush=True)
 
-            # Step 5: Generate ZIP Archive
             print("📦 [STEP 5] Building output ZIP file archive...", flush=True)
             zip_filename = f"{folder_name}.zip"
             zip_path = os.path.join(OUTPUT_DIR, job_id, zip_filename)
@@ -961,7 +1076,6 @@ Generated Date        : {current_date_str}
             zip_download_url = f"/outputs/{job_id}/{zip_filename}"
             print(f"✅ [STEP 5 OK] ZIP file generated: {zip_path} ({zip_size_kb} KB)", flush=True)
 
-            # Step 6: Cloudinary Upload (Fault-Tolerant)
             print("☁ [STEP 6] Uploading ZIP file to Cloudinary...", flush=True)
             cloudinary_zip_url = upload_to_cloudinary(
                 zip_path,
@@ -969,7 +1083,6 @@ Generated Date        : {current_date_str}
             )
             print(f"✅ [STEP 6 OK] Cloudinary ZIP URL: {cloudinary_zip_url}", flush=True)
 
-            # Step 7: Firestore & Local Submission Log (Fault-Tolerant)
             print("💾 [STEP 7] Saving submission entry to DB...", flush=True)
             log_submission({
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -988,7 +1101,6 @@ Generated Date        : {current_date_str}
             })
             print("✅ [STEP 7 OK] DB Submission log complete.", flush=True)
 
-            # Step 8: Return JSON Response
             print("🎉 [STEP 8] Returning JSON response to client.", flush=True)
             print("==================================================", flush=True)
 
@@ -1030,6 +1142,9 @@ Generated Date        : {current_date_str}
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
+        (r"/api/login", ApiLoginHandler),
+        (r"/api/add_user", ApiAddUserHandler),
+        (r"/api/check_auth", ApiCheckAuthHandler),
         (r"/api/workflows", ApiWorkflowsHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
@@ -1051,6 +1166,6 @@ if __name__ == "__main__":
     app = make_app()
     app.listen(port)
     print(f"==================================================", flush=True)
-    print(f"🚀 DocFlow Pro Application Engine Running on Port {port}!", flush=True)
+    print(f"🚀 DocFlow Pro Authorized Server Engine Running on Port {port}!", flush=True)
     print(f"==================================================", flush=True)
     tornado.ioloop.IOLoop.current().start()

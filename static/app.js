@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DocFlow Pro - Frontend Engine with Ordered Credentials & Direct ZIP File Download
+   DocFlow Pro - Frontend Engine with Authorized Member Authentication
    ========================================================================== */
 
 class DocFlowApp {
@@ -12,15 +12,154 @@ class DocFlowApp {
     this.zipDownloadUrl = null;
     this.modalSlotId = null;
     this.modalFile = null;
+    this.currentUser = null;
+    this.authToken = null;
 
     this.init();
   }
 
   async init() {
+    this.checkAuthStatus();
     await this.fetchWorkflows();
     this.renderServices();
   }
 
+  // --- MEMBER AUTHENTICATION ENGINE ---
+  checkAuthStatus() {
+    const savedToken = localStorage.getItem("docflow_token");
+    const savedUser = localStorage.getItem("docflow_username");
+
+    if (savedToken && savedUser) {
+      this.authToken = savedToken;
+      this.currentUser = savedUser;
+      this.showAuthenticatedApp();
+    } else {
+      this.showLoginModal();
+    }
+  }
+
+  async handleLogin(event) {
+    event.preventDefault();
+    const usernameInput = document.getElementById("loginUsername").value.trim();
+    const passwordInput = document.getElementById("loginPassword").value.trim();
+    const errorBox = document.getElementById("loginErrorMsg");
+
+    errorBox.style.display = "none";
+    errorBox.innerText = "";
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: usernameInput, password: passwordInput })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        this.authToken = data.token;
+        this.currentUser = data.username;
+
+        localStorage.setItem("docflow_token", data.token);
+        localStorage.setItem("docflow_username", data.username);
+
+        this.showAuthenticatedApp();
+        this.showToast(`Welcome back, Officer ${data.username}! Access Granted.`);
+      } else {
+        errorBox.style.display = "block";
+        errorBox.innerText = data.message || "Invalid Authorized Username or Password!";
+      }
+    } catch (e) {
+      errorBox.style.display = "block";
+      errorBox.innerText = "Network or Server authentication error: " + e.message;
+    }
+  }
+
+  showAuthenticatedApp() {
+    document.getElementById("loginModalContainer").style.display = "none";
+    document.getElementById("mainAppContent").style.display = "block";
+    document.getElementById("userPillContainer").style.display = "flex";
+    document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
+  }
+
+  showLoginModal() {
+    document.getElementById("loginModalContainer").style.display = "flex";
+    document.getElementById("mainAppContent").style.display = "none";
+    document.getElementById("userPillContainer").style.display = "none";
+  }
+
+  logout() {
+    this.authToken = null;
+    this.currentUser = null;
+    localStorage.removeItem("docflow_token");
+    localStorage.removeItem("docflow_username");
+    this.showLoginModal();
+    this.showToast("Logged out safely.");
+  }
+
+  // --- ADD AUTHORIZED MEMBER ENGINE ---
+  openAddMemberModal() {
+    if (!this.currentUser) {
+      alert("Only authorized logged-in members can add new members!");
+      return;
+    }
+    const msgBox = document.getElementById("addMemberMsg");
+    if (msgBox) {
+      msgBox.style.display = "none";
+      msgBox.innerText = "";
+    }
+    document.getElementById("addMemberModalContainer").style.display = "flex";
+  }
+
+  closeAddMemberModal() {
+    document.getElementById("addMemberModalContainer").style.display = "none";
+  }
+
+  async handleAddMember(event) {
+    event.preventDefault();
+    const newUsername = document.getElementById("newMemberUsername").value.trim();
+    const newPassword = document.getElementById("newMemberPassword").value.trim();
+    const msgBox = document.getElementById("addMemberMsg");
+
+    msgBox.style.display = "none";
+
+    try {
+      const res = await fetch("/api/add_user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ username: newUsername, password: newPassword })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        msgBox.style.display = "block";
+        msgBox.style.background = "rgba(34, 197, 94, 0.15)";
+        msgBox.style.color = "var(--accent-green)";
+        msgBox.style.border = "1px solid var(--accent-green)";
+        msgBox.innerText = data.message;
+        this.showToast(`New Member '${newUsername}' registered successfully!`);
+        document.getElementById("newMemberUsername").value = "";
+        document.getElementById("newMemberPassword").value = "";
+        setTimeout(() => this.closeAddMemberModal(), 1800);
+      } else {
+        msgBox.style.display = "block";
+        msgBox.style.background = "rgba(239, 68, 68, 0.15)";
+        msgBox.style.color = "#ef4444";
+        msgBox.style.border = "1px solid #ef4444";
+        msgBox.innerText = data.message || "Failed to add member.";
+      }
+    } catch (e) {
+      msgBox.style.display = "block";
+      msgBox.style.background = "rgba(239, 68, 68, 0.15)";
+      msgBox.style.color = "#ef4444";
+      msgBox.style.border = "1px solid #ef4444";
+      msgBox.innerText = "Error: " + e.message;
+    }
+  }
+
+  // --- WORKFLOW & APP SERVICES ---
   async fetchWorkflows() {
     try {
       const res = await fetch("/api/workflows");
@@ -42,13 +181,13 @@ class DocFlowApp {
     if (tab === "services") {
       sTab.style.display = "block";
       pTab.style.display = "none";
-      sBtn.style.background = "var(--bg-card-hover)";
-      pBtn.style.background = "var(--bg-card)";
+      sBtn.classList.add("active");
+      pBtn.classList.remove("active");
     } else {
       sTab.style.display = "none";
       pTab.style.display = "block";
-      sBtn.style.background = "var(--bg-card)";
-      pBtn.style.background = "var(--bg-card-hover)";
+      sBtn.classList.remove("active");
+      pBtn.classList.add("active");
     }
   }
 
@@ -98,170 +237,86 @@ class DocFlowApp {
     document.getElementById("homeView").style.display = "none";
     document.getElementById("workflowView").style.display = "block";
     document.getElementById("wfTitle").innerText = wf.title;
-    document.getElementById("resultsSection").style.display = "none";
-    document.getElementById("mspcCard").style.display = "none";
-    document.getElementById("stepTracker").style.display = "none";
-
     document.getElementById("uploadLockBanner").style.display = "block";
     document.getElementById("applicantInfoCard").style.display = "none";
-    document.getElementById("processActionBox").style.display = "none";
+    document.getElementById("processingCard").style.display = "none";
+    document.getElementById("resultCard").style.display = "none";
 
-    this.renderDocCards(wf);
+    this.renderDocUploadGrid();
   }
 
-  renderDocCards(wf) {
+  renderDocUploadGrid() {
     const grid = document.getElementById("docUploadGrid");
-    if (!grid) return;
+    if (!grid || !this.activeWf) return;
 
-    grid.innerHTML = wf.documents.map(doc => {
+    let html = this.activeWf.documents.map(doc => {
       if (doc.multi_side) {
         return `
           <div class="doc-card" id="card_${doc.id}">
-            <div>
-              <div class="doc-card-header">
-                <span class="doc-title">${doc.label}</span>
-                <span class="badge-status" id="badge_${doc.id}">Pending</span>
-              </div>
-              <p class="doc-hint">${doc.hint}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+              <h4 style="font-size: 1rem; font-weight: 700;">${doc.label}</h4>
+              <span class="badge-status" id="badge_${doc.id}">Pending Both Sides</span>
             </div>
-
-            <div style="display: flex; gap: 0.6rem; margin-top: 0.8rem;">
-              <div style="flex:1;">
-                <div class="doc-upload-box" onclick="docFlowApp.triggerFileSelect('${doc.id}_front')">
-                  <i class="fa-solid fa-file-image"></i>
-                  <div style="font-size: 0.8rem; font-weight:600;" id="label_${doc.id}_front">Upload Front</div>
-                  <input type="file" id="input_${doc.id}_front" style="display:none" onchange="docFlowApp.handleFilePicked('${doc.id}', 'front', this)">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">${doc.hint}</p>
+            
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+              <!-- Front Side Drop Zone -->
+              <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Front Side</label>
+                <div class="drop-zone" id="dz_${doc.id}_front" onclick="document.getElementById('input_${doc.id}_front').click()">
+                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+                  <span id="label_${doc.id}_front" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Front File</span>
+                  <input type="file" id="input_${doc.id}_front" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'front', this.files)">
                 </div>
-                <div id="editor_btn_${doc.id}_front" style="margin-top:0.4rem; text-align:center;"></div>
+                <div id="editor_btn_${doc.id}_front"></div>
               </div>
 
-              <div style="flex:1;">
-                <div class="doc-upload-box" onclick="docFlowApp.triggerFileSelect('${doc.id}_back')">
-                  <i class="fa-solid fa-file-image"></i>
-                  <div style="font-size: 0.8rem; font-weight:600;" id="label_${doc.id}_back">Upload Back</div>
-                  <input type="file" id="input_${doc.id}_back" style="display:none" onchange="docFlowApp.handleFilePicked('${doc.id}', 'back', this)">
+              <!-- Back Side Drop Zone -->
+              <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-bright);">Back Side</label>
+                <div class="drop-zone" id="dz_${doc.id}_back" onclick="document.getElementById('input_${doc.id}_back').click()">
+                  <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.4rem; color: var(--accent-blue);"></i>
+                  <span id="label_${doc.id}_back" style="font-size: 0.78rem; display: block; margin-top: 0.4rem;">Select Back File</span>
+                  <input type="file" id="input_${doc.id}_back" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'back', this.files)">
                 </div>
-                <div id="editor_btn_${doc.id}_back" style="margin-top:0.4rem; text-align:center;"></div>
+                <div id="editor_btn_${doc.id}_back"></div>
               </div>
             </div>
           </div>
         `;
-      }
-
-      return `
-        <div class="doc-card" id="card_${doc.id}">
-          <div>
-            <div class="doc-card-header">
-              <span class="doc-title">${doc.label}</span>
+      } else {
+        return `
+          <div class="doc-card" id="card_${doc.id}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+              <h4 style="font-size: 1rem; font-weight: 700;">${doc.label}</h4>
               <span class="badge-status" id="badge_${doc.id}">Pending</span>
             </div>
-            <p class="doc-hint">${doc.hint}</p>
-          </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">${doc.hint}</p>
 
-          <div class="doc-upload-box" onclick="docFlowApp.triggerFileSelect('${doc.id}')">
-            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.5rem; color: var(--accent-blue);"></i>
-            <div style="font-size: 0.85rem; font-weight:600; margin-top:0.4rem;" id="label_${doc.id}">Click or Drag File Here</div>
-            <input type="file" id="input_${doc.id}" style="display:none" onchange="docFlowApp.handleFilePicked('${doc.id}', 'single', this)">
+            <div class="drop-zone" id="dz_${doc.id}" onclick="document.getElementById('input_${doc.id}').click()">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--accent-blue);"></i>
+              <span id="label_${doc.id}" style="font-size: 0.85rem; display: block; margin-top: 0.4rem;">Click to select file</span>
+              <input type="file" id="input_${doc.id}" accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handleFileSelect('${doc.id}', 'single', this.files)">
+            </div>
+            <div id="editor_btn_${doc.id}" style="text-align: center;"></div>
           </div>
-          <div id="editor_btn_${doc.id}" style="margin-top:0.4rem; text-align:center;"></div>
-        </div>
-      `;
+        `;
+      }
     }).join("");
+
+    grid.innerHTML = html;
   }
 
-  triggerFileSelect(inputId) {
-    document.getElementById(`input_${inputId}`)?.click();
-  }
+  handleFileSelect(docId, mode, files) {
+    if (!files || files.length === 0) return;
+    const file = files[0];
 
-  handleFilePicked(docId, mode, inputEl) {
-    if (!inputEl.files || !inputEl.files[0]) return;
-    const file = inputEl.files[0];
     this.assignFileToSlot(docId, mode, file);
+    this.checkAndUnlockApplicantForm();
 
-    // Run OCR Data Extractor on document upload
-    if (docId === 'reg_cert' || docId === 'old_ppp_card' || docId === 'aadhaar') {
-      this.extractDataFromDocument(file);
+    if (docId === "old_ppp_card" || docId === "reg_cert" || docId === "aadhaar") {
+      this.runOcrExtraction(file);
     }
-
-    this.checkAllDocsUploaded();
-  }
-
-  checkAllDocsUploaded() {
-    if (!this.activeWf) return;
-
-    let allReady = true;
-    for (const doc of this.activeWf.documents) {
-      const entry = this.uploadedFilesMap[doc.id];
-      if (doc.multi_side) {
-        if (!entry || (!entry.front && !entry.back)) {
-          allReady = false;
-          break;
-        }
-      } else {
-        if (!entry) {
-          allReady = false;
-          break;
-        }
-      }
-    }
-
-    if (allReady) {
-      document.getElementById("uploadLockBanner").style.display = "none";
-      document.getElementById("applicantInfoCard").style.display = "block";
-      document.getElementById("processActionBox").style.display = "block";
-
-      this.showToast("✨ All documents uploaded! Applicant Info unlocked & auto-filled via OCR.");
-    }
-  }
-
-  async extractDataFromDocument(file) {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/extract_document_data", { method: "POST", body: formData });
-      const data = await res.json();
-
-      if (data.status === "success" && data.extracted) {
-        const ext = data.extracted;
-        if (ext.name) document.getElementById("applicantName").value = ext.name;
-        if (ext.reg_number) {
-          document.getElementById("applicantRegNumber").value = ext.reg_number;
-          document.getElementById("applicantLoginId").value = `MSPC${ext.reg_number}`;
-        }
-        if (ext.dob) document.getElementById("applicantDob").value = ext.dob;
-        if (ext.mobile) document.getElementById("applicantMobile").value = ext.mobile;
-        if (ext.email) document.getElementById("applicantEmail").value = ext.email;
-
-        const cleanName = ext.name.replace(/[^A-Za-z0-9]/g, '_');
-        document.getElementById("folderNameInput").value = `${cleanName}_PPP_Renewal`;
-      }
-    } catch (e) {
-      console.log("OCR Auto-extraction note:", e);
-    }
-  }
-
-  showToast(msg) {
-    const toast = document.createElement("div");
-    toast.style.position = "fixed";
-    toast.style.bottom = "20px";
-    toast.style.right = "20px";
-    toast.style.background = "linear-gradient(135deg, #8b5cf6, #3b82f6)";
-    toast.style.color = "#fff";
-    toast.style.padding = "0.8rem 1.2rem";
-    toast.style.borderRadius = "8px";
-    toast.style.boxShadow = "0 10px 25px rgba(0,0,0,0.3)";
-    toast.style.zIndex = "99999";
-    toast.style.fontWeight = "600";
-    toast.style.fontSize = "0.88rem";
-    toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${msg}`;
-
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
-      }
-    }, 4000);
   }
 
   assignFileToSlot(docId, mode, file) {
@@ -298,24 +353,91 @@ class DocFlowApp {
     }
   }
 
-  // --- MSPC PORTAL DIRECT REDIRECT & DEDICATED EMAIL QUICK COPY MODAL ---
-  openMspcPortalRedirectModal() {
-    const name = document.getElementById("applicantName")?.value || "VINAYAK PATIL";
-    const regNo = document.getElementById("applicantRegNumber")?.value || "189423";
-    const dob = document.getElementById("applicantDob")?.value || "21/06/2004";
-    const mobile = document.getElementById("applicantMobile")?.value || "9876543210";
-    const email = document.getElementById("applicantEmail")?.value || "vinayak@gmail.com";
+  checkAndUnlockApplicantForm() {
+    if (!this.activeWf) return;
+    let allReady = true;
 
-    // Compute Password (VIN2106)
+    for (const doc of this.activeWf.documents) {
+      const entry = this.uploadedFilesMap[doc.id];
+      if (!entry) {
+        allReady = false;
+        break;
+      }
+      if (doc.multi_side && (!entry.front || !entry.back)) {
+        allReady = false;
+        break;
+      }
+    }
+
+    if (allReady) {
+      document.getElementById("uploadLockBanner").style.display = "none";
+      document.getElementById("applicantInfoCard").style.display = "block";
+      this.renderDocSummaryList();
+      this.showToast("All document slots filled! Applicant Details Unlocked.");
+    }
+  }
+
+  async runOcrExtraction(file) {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/extract_document_data", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.status === "success" && data.extracted) {
+        const ext = data.extracted;
+        document.getElementById("applicantName").value = ext.name || "SHANKAR RAMPATI SINGH";
+        document.getElementById("regNumber").value = ext.reg_number || "40161";
+        document.getElementById("applicantDob").value = ext.dob || "12/11/1971";
+        document.getElementById("applicantMobile").value = ext.mobile || "8830185054";
+        document.getElementById("applicantEmail").value = ext.email || "shankarsingh40717@gmail.com";
+        document.getElementById("applicantLoginId").value = ext.login_id || `MSPC${ext.reg_number}`;
+        
+        let cleanName = ext.name.replace(/[^A-Za-z0-9]/g, '_');
+        document.getElementById("folderName").value = `${cleanName}_PPP_Renewal`;
+
+        this.showToast("Auto-OCR extracted Applicant Name & Credentials!");
+      }
+    } catch (e) {
+      console.log("OCR Auto-extraction note:", e);
+    }
+  }
+
+  renderDocSummaryList() {
+    const list = document.getElementById("docSummaryList");
+    if (!list || !this.activeWf) return;
+
+    let html = this.activeWf.documents.map(doc => `
+      <div class="summary-item">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <i class="fa-solid fa-file-pdf" style="color: var(--accent-blue);"></i>
+          <span style="font-size: 0.88rem; font-weight: 600;">${doc.output_name} (${doc.label})</span>
+        </div>
+        <span class="badge-status" style="background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);">
+          Target: < ${doc.max_kb} KB
+        </span>
+      </div>
+    `).join("");
+
+    list.innerHTML = html;
+  }
+
+  openMspcRedirectModal() {
+    const name = document.getElementById("applicantName")?.value || "SHANKAR RAMPATI SINGH";
+    const regNo = document.getElementById("regNumber")?.value || "40161";
+    const dob = document.getElementById("applicantDob")?.value || "12/11/1971";
+    const mobile = document.getElementById("applicantMobile")?.value || "8830185054";
+    const email = document.getElementById("applicantEmail")?.value || "shankarsingh40717@gmail.com";
+
     let cleanName = name.replace(/[^A-Za-z]/g, '').toUpperCase();
-    let prefix = cleanName.substring(0, 3) || "VIN";
+    let prefix = cleanName.substring(0, 3) || "SHA";
     let dobParts = dob.split('/');
-    let day = dobParts[0] || "21";
-    let month = dobParts[1] || "06";
+    let day = dobParts[0] || "12";
+    let month = dobParts[1] || "11";
     let pass = `${prefix}${day}${month}`;
 
     document.getElementById("copyRegNo").innerText = regNo;
-    document.getElementById("copyName").innerText = name;
     document.getElementById("copyDob").innerText = dob;
     document.getElementById("copyMobile").innerText = mobile;
     document.getElementById("copyEmail").innerText = email;
@@ -331,13 +453,36 @@ class DocFlowApp {
   copyTextToClipboard(text) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-      this.showToast(`Copied "${text}" to clipboard! Now paste it on MSPC Portal.`);
+      this.showToast(`Copied "${text}" to clipboard! Paste it on MSPC Portal.`);
     }).catch(err => {
       console.error("Clipboard copy error:", err);
     });
   }
 
-  // --- POP-UP EDITOR MODAL WINDOW ---
+  showToast(msg) {
+    const toast = document.createElement("div");
+    toast.style.position = "fixed";
+    toast.style.bottom = "20px";
+    toast.style.right = "20px";
+    toast.style.background = "linear-gradient(135deg, #8b5cf6, #3b82f6)";
+    toast.style.color = "#fff";
+    toast.style.padding = "0.8rem 1.2rem";
+    toast.style.borderRadius = "8px";
+    toast.style.boxShadow = "0 10px 25px rgba(0,0,0,0.3)";
+    toast.style.zIndex = "99999";
+    toast.style.fontWeight = "600";
+    toast.style.fontSize = "0.88rem";
+    toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${msg}`;
+
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 4000);
+  }
+
+  // --- POP-UP LIVE IMAGE EDITOR ---
   async openRotationModal(slotId) {
     const params = this.transformParamsMap[slotId];
     if (!params || !params.file) return;
@@ -450,41 +595,25 @@ class DocFlowApp {
     this.closeRotationModal();
   }
 
-  // --- WORKFLOW PROCESSING & DIRECT ZIP FILE GENERATION ---
+  // --- WORKFLOW PROCESSING ---
   async processWorkflow() {
     if (!this.activeWf) return;
 
-    const applicantName = document.getElementById("applicantName").value || "VINAYAK PATIL";
-    const regNumber = document.getElementById("applicantRegNumber").value || "189423";
+    const applicantName = document.getElementById("applicantName").value || "SHANKAR RAMPATI SINGH";
+    const regNumber = document.getElementById("regNumber").value || "40161";
     const loginId = document.getElementById("applicantLoginId").value || `MSPC${regNumber}`;
-    const dob = document.getElementById("applicantDob").value || "21/06/2004";
-    const mobile = document.getElementById("applicantMobile").value || "9876543210";
-    const email = document.getElementById("applicantEmail").value || "vinayak@gmail.com";
-    const folderName = document.getElementById("folderNameInput").value || "Vinayak_Patil_PPP_Renewal";
+    const dob = document.getElementById("applicantDob").value || "12/11/1971";
+    const mobile = document.getElementById("applicantMobile").value || "8830185054";
+    const email = document.getElementById("applicantEmail").value || "shankarsingh40717@gmail.com";
+    const folderName = document.getElementById("folderName").value || "RAMPATI_SINGH_PPP_Renewal";
 
-    const btn = document.getElementById("startProcessBtn");
-    const statusText = document.getElementById("progressStatusText");
-    const stepTracker = document.getElementById("stepTracker");
+    const processBtn = document.getElementById("processBtn");
+    const processingCard = document.getElementById("processingCard");
+    const resultCard = document.getElementById("resultCard");
 
-    btn.disabled = true;
-    stepTracker.style.display = "flex";
-
-    const steps = [
-      { id: "step1", text: "1. MSPC Login & Password Calculation..." },
-      { id: "step2", text: "2. Verifying orientation (0° Default)..." },
-      { id: "step3", text: "3. Applying image deblur filter..." },
-      { id: "step4", text: "4. Resizing photo (160x160) & signature canvas (160x40)..." },
-      { id: "step5", text: "5. Strict compression (<100KB PDF, <20KB JPG)..." },
-      { id: "step6", text: "6. Building Output ZIP File..." }
-    ];
-
-    for (let i = 0; i < steps.length; i++) {
-      const s = steps[i];
-      statusText.innerText = s.text;
-      document.querySelectorAll(".step-item").forEach(item => item.classList.remove("active"));
-      document.getElementById(s.id)?.classList.add("active");
-      await new Promise(r => setTimeout(r, 400));
-    }
+    processBtn.disabled = true;
+    processingCard.style.display = "block";
+    resultCard.style.display = "none";
 
     const formData = new FormData();
     formData.append("workflow_id", this.activeWf.id);
@@ -527,41 +656,55 @@ class DocFlowApp {
     try {
       const res = await fetch("/api/process_workflow", { method: "POST", body: formData });
       const data = await res.json();
+
+      processingCard.style.display = "none";
+
       if (data.status === "success") {
         this.processedFilesList = data.files;
         this.zipDownloadUrl = data.zip_download_url;
 
-        document.getElementById("resultsSection").style.display = "block";
+        resultCard.style.display = "block";
 
-        // Configure Primary ZIP File Download Button
-        const zipBtn = document.getElementById("mainZipDownloadBtn");
+        const zipBtn = document.getElementById("zipDownloadBtn");
         zipBtn.href = data.zip_download_url;
         zipBtn.download = data.zip_filename;
-        document.getElementById("zipBtnLabel").innerText = `Download ${data.zip_filename} (${data.zip_size_kb} KB)`;
+        document.getElementById("zipFileNameLabel").innerText = data.zip_filename;
+        document.getElementById("zipFileSizeLabel").innerText = `Package Size: ${data.zip_size_kb} KB`;
 
         if (data.mspc_credentials) {
           const c = data.mspc_credentials;
-          document.getElementById("mspcCard").style.display = "block";
-          document.getElementById("mspcApplicantName").innerText = c.applicant_name;
-          document.getElementById("mspcLoginId").innerText = c.login_id;
-          document.getElementById("mspcPass").innerText = c.password;
-          document.getElementById("mspcRegNo").innerText = c.reg_number;
-          document.getElementById("mspcDob").innerText = c.dob;
-          document.getElementById("mspcMobile").innerText = c.mobile;
-          document.getElementById("mspcEmail").innerText = c.email;
-          document.getElementById("mspcGenDate").innerText = c.generated_date;
+          document.getElementById("resApplicantName").innerText = c.applicant_name;
+          document.getElementById("resLoginId").innerText = c.login_id;
+          document.getElementById("resMspcPass").innerText = c.password;
+          document.getElementById("resRegNo").innerText = c.reg_number;
+          document.getElementById("resDob").innerText = c.dob;
+          document.getElementById("resMobile").innerText = c.mobile;
+          document.getElementById("resEmail").innerText = c.email;
+          document.getElementById("resGenDate").innerText = c.generated_date;
         }
 
-        statusText.innerText = `✓ Output ZIP File (${data.zip_filename}) Generated Successfully!`;
+        const listContainer = document.getElementById("processedFilesList");
+        listContainer.innerHTML = data.files.map(f => `
+          <div class="summary-item">
+            <div>
+              <strong>${f.filename}</strong> (${f.label})
+              <div style="font-size: 0.8rem; color: var(--text-muted);">${f.status}</div>
+            </div>
+            <a href="${f.download_url}" download class="btn-back" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">
+              <i class="fa-solid fa-download"></i> Download
+            </a>
+          </div>
+        `).join("");
+
+        this.showToast("Workflow completed successfully! Download ZIP ready.");
       } else {
-        alert("Error: " + data.message);
-        statusText.innerText = "Processing error";
+        alert("Workflow Error: " + data.message);
       }
     } catch (e) {
-      alert("Error: " + e.message);
-      statusText.innerText = "Failed";
+      processingCard.style.display = "none";
+      alert("Processing Exception: " + e.message);
     } finally {
-      btn.disabled = false;
+      processBtn.disabled = false;
     }
   }
 }
