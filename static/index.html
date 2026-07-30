@@ -24,6 +24,9 @@
         <button class="nav-tab active" id="navServicesBtn" onclick="docFlowApp.switchTab('services')">
           <i class="fa-solid fa-layer-group"></i> Workflows
         </button>
+        <button class="nav-tab" id="navApptAccBtn" onclick="docFlowApp.switchTab('appt_acc')">
+          <i class="fa-solid fa-file-contract"></i> Pharmacist Appointment & Acceptance
+        </button>
         <button class="nav-tab" id="navPdfEditorBtn" onclick="docFlowApp.switchTab('pdf_editor')">
           <i class="fa-solid fa-wand-magic-sparkles"></i> PDF Studio
         </button>
@@ -219,6 +222,131 @@
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- PHARMACIST APPOINTMENT & ACCEPTANCE TAB (2 SECTIONS: 1. APPOINTMENT & ACCEPTANCE, 2. SELF DECLARATION SD) -->
+    <section id="apptAccTab" style="display: none;">
+      <div class="hero-header" style="margin-bottom: 1.5rem;">
+        <h1>Pharmacist Appointment & Acceptance Suite</h1>
+        <p>Generate formatted Appointment & Acceptance letters, or prepare Self Declaration (SD) documents under specified file limits.</p>
+      </div>
+
+      <!-- SECTION 1: APPOINTMENT & ACCEPTANCE LETTER -->
+      <div id="section1ApptAcc" class="doc-card" style="max-width: 900px; margin: 0 auto 2rem auto; border-color: var(--accent-blue);">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+          <i class="fa-solid fa-file-contract"></i> Section 1: Appointment & Acceptance Letter Generator
+        </h3>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+          Fill details below to generate the formatted, compressed <strong>Appointment & Acceptance Letter PDF</strong> (&lt; 125 KB). Signature lines remain 100% blank.
+        </p>
+
+        <form id="appointmentLetterForm" onsubmit="event.preventDefault(); docFlowApp.generateAppointmentLetter();">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 1.2rem;">
+            
+            <!-- APPOINTMENT LETTER DETAILS -->
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
+                <i class="fa-solid fa-file-signature"></i> Appointment Details
+              </h4>
+              
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Appointment Date</label>
+                <input type="date" id="appt_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Pharmacist Full Name</label>
+                <input type="text" id="appt_pharmacist_name" class="form-control" placeholder="e.g. Vinayak Ramesh Patil" style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Joining Date / Effective From</label>
+                <input type="date" id="appt_joining_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Proprietor Full Name</label>
+                <input type="text" id="appt_proprietor_name" class="form-control" placeholder="Proprietor Name" style="font-size: 0.85rem; width: 100%;">
+              </div>
+            </div>
+
+            <!-- ACCEPTANCE LETTER DETAILS -->
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
+              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-green); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
+                <i class="fa-solid fa-circle-check"></i> Acceptance Details
+              </h4>
+
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Acceptance Date</label>
+                <input type="date" id="acc_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.6rem;">
+                <label style="font-size: 0.78rem;">Medical Store Name & Address</label>
+                <input type="text" id="acc_store_name" class="form-control" placeholder="e.g. Krishna Generic Medical and General Stores" style="font-size: 0.85rem; width: 100%;">
+              </div>
+
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); border-radius: 8px; padding: 0.8rem; margin-top: 1rem; font-size: 0.75rem; color: var(--text-bright);">
+                <i class="fa-solid fa-shield-halved" style="color: var(--accent-green);"></i> <strong>Notice:</strong> Pharmacist Name automatically syncs across both letters. Output size target: &lt; 125 KB.
+              </div>
+            </div>
+
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn-primary" style="padding: 0.65rem 1.8rem; font-size: 0.92rem; background: var(--accent-blue);">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Section 1: Appointment & Acceptance Letter (PDF)
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- SECTION 2: SELF DECLARATION (SD) -->
+      <div id="section2SelfDeclaration" class="doc-card" style="max-width: 900px; margin: 0 auto; border-color: var(--accent-purple);">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+          <i class="fa-solid fa-file-shield"></i> Section 2: Self Declaration (SD) Suite
+        </h3>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+          Generate a formatted <strong>Self Declaration (SD) PDF</strong> under 125 KB.
+        </p>
+
+        <form id="selfDeclarationForm" onsubmit="event.preventDefault(); docFlowApp.generateSelfDeclaration();">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.2rem;">
+            
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Pharmacist Name</label>
+              <input type="text" id="sd_pharmacist_name" class="form-control" placeholder="Full Pharmacist Name" style="font-size: 0.85rem; width: 100%;">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">MSPC Registration Number</label>
+              <input type="text" id="sd_reg_no" class="form-control" placeholder="e.g. 123456" style="font-size: 0.85rem; width: 100%;">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Residential Address</label>
+              <input type="text" id="sd_address" class="form-control" placeholder="Full Address" style="font-size: 0.85rem; width: 100%;">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Medical Store Name</label>
+              <input type="text" id="sd_store_name" class="form-control" placeholder="Store Name" style="font-size: 0.85rem; width: 100%;">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Declaration Date</label>
+              <input type="date" id="sd_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
+            </div>
+
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
+            <button type="submit" class="btn-primary" style="padding: 0.65rem 1.8rem; font-size: 0.92rem; background: var(--accent-purple);">
+              <i class="fa-solid fa-file-shield"></i> Generate Section 2: Self Declaration SD (PDF)
+            </button>
+          </div>
+        </form>
       </div>
     </section>
 

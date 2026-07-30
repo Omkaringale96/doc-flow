@@ -876,9 +876,14 @@ class MainHandler(BaseHandler):
 class ApiWorkflowsHandler(BaseHandler):
     def get(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
+        user = self.get_current_user_name()
+        available_workflows = list(WORKFLOWS.values())
+        if user == "Datta":
+            available_workflows = [w for w in available_workflows if w["id"] != "ppp_renewal"]
+
         self.write({
             "status": "success",
-            "workflows": list(WORKFLOWS.values())
+            "workflows": available_workflows
         })
 
 
@@ -1070,6 +1075,16 @@ class ApiProcessWorkflowHandler(BaseHandler):
             print("🚀 [STEP 1] Starting /api/process_workflow request...", flush=True)
 
             workflow_id = self.get_body_argument("workflow_id", default="ppp_renewal")
+            
+            user = self.get_current_user_name()
+            if user == "Datta" and workflow_id == "ppp_renewal":
+                self.set_status(403)
+                self.write({
+                    "status": "error",
+                    "message": "Access Denied! User 'Datta' does not have access to the PP Renewal workflow."
+                })
+                return
+
             workflow = WORKFLOWS.get(workflow_id, WORKFLOWS["ppp_renewal"])
             all_documents = get_workflow_documents(workflow)
             
@@ -1908,6 +1923,77 @@ class ApiFillAppointmentAcceptanceHandler(BaseHandler):
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
+class ApiGenerateSelfDeclarationHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            job_id = uuid.uuid4().hex[:8]
+            job_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_dir, exist_ok=True)
+
+            pharmacist_name = self.get_body_argument("pharmacist_name", default="").strip()
+            reg_no = self.get_body_argument("reg_no", default="").strip()
+            address = self.get_body_argument("address", default="").strip()
+            date_str = self.get_body_argument("date_str", default="").strip()
+            store_name = self.get_body_argument("store_name", default="").strip()
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            doc = fitz.open()
+            page = doc.new_page(width=595, height=842) # A4
+
+            page.insert_text(fitz.Point(200, 60), "SELF DECLARATION", fontsize=16, fontname="helv", color=(0,0,0))
+
+            text_body = f"""
+I, {pharmacist_name}, residing at {address}, hereby solemnly declare that:
+
+1. I am a Registered Pharmacist under the Maharashtra State Pharmacy Council (MSPC) bearing Registration No. {reg_no}.
+
+2. I am currently appointed as a Registered Pharmacist at {store_name}.
+
+3. I am personally responsible for dispensing medicines, maintaining drug records, and ensuring full compliance with the Drugs and Cosmetics Act, 1940 and Rules thereunder.
+
+4. The information provided above is true and correct to the best of my knowledge and belief.
+
+DATE : {date_str}
+PLACE : ____________________
+
+
+                                              ___________________________________
+                                              Signature of Registered Pharmacist
+                                              ({pharmacist_name})
+"""
+
+            rect = fitz.Rect(50, 100, 545, 750)
+            page.insert_textbox(rect, text_body, fontsize=11, fontname="helv", color=(0,0,0), align=0)
+
+            out_raw = os.path.join(job_dir, "raw_sd.pdf")
+            doc.save(out_raw)
+            doc.close()
+
+            final_out = os.path.join(job_dir, "Self_Declaration.pdf")
+            process_pdf_document([out_raw], final_out, max_kb=max_kb)
+
+            if os.path.exists(out_raw):
+                os.remove(out_raw)
+
+            size_kb = os.path.getsize(final_out) / 1024.0
+            print(f"✅ Self Declaration SD generated: {final_out} ({size_kb:.1f} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "Self Declaration (SD) generated successfully!",
+                "filename": "Self_Declaration.pdf",
+                "file_size_kb": round(size_kb, 1),
+                "download_url": f"/outputs/{job_id}/Self_Declaration.pdf"
+            })
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -1925,6 +2011,7 @@ def make_app():
         (r"/api/detect_pdf_blanks", ApiDetectPdfBlanksHandler),
         (r"/api/autofill_pdf", ApiAutoFillPdfHandler),
         (r"/api/fill_appointment_letter", ApiFillAppointmentAcceptanceHandler),
+        (r"/api/generate_self_declaration", ApiGenerateSelfDeclarationHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)
