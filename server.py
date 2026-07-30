@@ -532,62 +532,55 @@ def process_signature_image(input_path, output_path, target_w=160, target_h=40, 
     return os.path.getsize(output_path) / 1024.0
 
 
-def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=None, flips_h=None, flips_v=None, free_angles=None):
+def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=None, flips_h=None, flips_v=None, free_angles=None):
     if manual_rotations is None: manual_rotations = []
     if flips_h is None: flips_h = []
     if flips_v is None: flips_v = []
     if free_angles is None: free_angles = []
 
-    # Check if inputs contain existing PDF files
-    has_pdf_file = any(p.lower().endswith('.pdf') for p in input_paths if os.path.exists(p))
+    valid_paths = [p for p in input_paths if os.path.exists(p) and os.path.getsize(p) > 0]
+    if not valid_paths:
+        blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
+        blank.save(output_path, "PDF")
+        return os.path.getsize(output_path) / 1024.0, 1
 
-    if has_pdf_file and len(input_paths) == 1 and input_paths[0].lower().endswith('.pdf'):
-        # Direct PDF optimization
-        src_pdf = input_paths[0]
+    # 1. Direct PyMuPDF PDF Merge if all inputs are existing PDF files and no rotation/flips needed
+    all_pdfs = all(p.lower().endswith('.pdf') for p in valid_paths)
+    no_transforms = not any(manual_rotations) and not any(flips_h) and not any(flips_v) and not any(free_angles)
+
+    if all_pdfs and no_transforms:
         try:
-            reader = pypdf.PdfReader(src_pdf)
-            writer = pypdf.PdfWriter()
-            for page in reader.pages:
-                page.compress_content_streams()
-                writer.add_page(page)
+            merged_doc = fitz.open()
+            total_pgs = 0
+            for p in valid_paths:
+                d = fitz.open(p)
+                merged_doc.insert_pdf(d)
+                total_pgs += len(d)
+                d.close()
             
-            with open(output_path, "wb") as f_out:
-                writer.write(f_out)
-            
+            merged_doc.save(output_path, garbage=4, deflate=True)
+            merged_doc.close()
+
             size_kb = os.path.getsize(output_path) / 1024.0
+            print(f"⚡ Direct PyMuPDF Crisp Merge Result: {size_kb:.1f} KB (max: {max_kb} KB)", flush=True)
+
             if size_kb <= max_kb:
-                return size_kb, len(reader.pages)
+                return size_kb, total_pgs
         except Exception as e:
-            print(f"⚠️ Direct PDF copy warning: {e}", flush=True)
+            print(f"⚠️ Direct PDF merge warning: {e}", flush=True)
 
+    # 2. High-DPI Image Conversion Fallback if size > max_kb or transforms applied
     images = []
-    for idx, path in enumerate(input_paths):
-        if not os.path.exists(path) or os.path.getsize(path) == 0:
-            print(f"⚠️ Input path {path} invalid/missing, substituting blank canvas.", flush=True)
-            blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
-            images.append(blank)
-            continue
-
+    for idx, path in enumerate(valid_paths):
         try:
             if path.lower().endswith('.pdf'):
-                try:
-                    doc = fitz.open(path)
-                    for page in doc:
-                        pix = page.get_pixmap(dpi=150)
-                        pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                        images.append(pil_img)
-                    doc.close()
-                except Exception as pdf_err:
-                    print(f"⚠️ PDF extraction fallback for {path}: {pdf_err}", flush=True)
-                    try:
-                        reader = pypdf.PdfReader(path)
-                        for page in reader.pages:
-                            for img_obj in page.images:
-                                pil_img = Image.open(BytesIO(img_obj.data)).convert("RGB")
-                                images.append(pil_img)
-                    except Exception:
-                        blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
-                        images.append(blank)
+                doc = fitz.open(path)
+                for page in doc:
+                    # 250 DPI for crystal-clear text rendering
+                    pix = page.get_pixmap(dpi=250)
+                    pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    images.append(pil_img)
+                doc.close()
             else:
                 pil = Image.open(path).convert("RGB")
                 try:
@@ -612,13 +605,13 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
 
                 del cv_img, processed_bgr, processed_rgb, processed_pil
         except Exception as err:
-            print(f"⚠️ Skipping file {path}: {err}", flush=True)
+            print(f"⚠️ Error processing file {path}: {err}", flush=True)
 
     if not images:
         blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
         images = [blank]
 
-    quality = 88
+    quality = 90
     scale_factor = 1.0
 
     while True:
@@ -632,23 +625,23 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
             output_path, "PDF",
             save_all=True,
             append_images=temp_imgs[1:],
-            resolution=72.0,
+            resolution=150.0,
             quality=quality
         )
 
         size_kb = os.path.getsize(output_path) / 1024.0
-        if size_kb <= max_kb or (quality <= 15 and scale_factor <= 0.3):
+        if size_kb <= max_kb or (quality <= 25 and scale_factor <= 0.4):
             break
 
-        if quality > 20:
-            quality -= 15
+        if quality > 35:
+            quality -= 10
         else:
-            scale_factor *= 0.75
+            scale_factor *= 0.85
 
     del images, temp_imgs
     gc.collect()
 
-    return os.path.getsize(output_path) / 1024.0, len(input_paths)
+    return os.path.getsize(output_path) / 1024.0, len(valid_paths)
 
 
 def process_image_document(input_path, output_path, target_w, target_h, max_kb=20, manual_rotation=0, flip_h=False, flip_v=False, free_angle=0.0):
@@ -1155,13 +1148,8 @@ class ApiProcessWorkflowHandler(BaseHandler):
                                 flips_v.append(flipv)
 
                     if not uploaded_paths:
-                        blank_img = Image.new("RGB", (600, 800), color=(255, 255, 255))
-                        tmp_p = os.path.join(UPLOAD_DIR, f"placeholder_{uuid.uuid4().hex}.jpg")
-                        blank_img.save(tmp_p)
-                        uploaded_paths = [tmp_p]
-                        manual_rots = [0]
-                        flips_h = [False]
-                        flips_v = [False]
+                        print(f"   ⏩ [SKIPPED] No files uploaded for '{doc_id}'", flush=True)
+                        continue
 
                     merged_kb, page_count = process_pdf_document(
                         uploaded_paths,
@@ -1208,6 +1196,10 @@ class ApiProcessWorkflowHandler(BaseHandler):
                             out_f.write(f['body'])
                         if os.path.exists(tmp_p) and os.path.getsize(tmp_p) > 0:
                             uploaded_back_paths.append(tmp_p)
+
+                    if not uploaded_front_paths and not uploaded_back_paths:
+                        print(f"   ⏩ [SKIPPED] No files uploaded for '{doc_id}'", flush=True)
+                        continue
 
                     if not uploaded_front_paths:
                         blank = Image.new("RGB", (800, 500), color=(255, 255, 255))
@@ -1261,13 +1253,8 @@ class ApiProcessWorkflowHandler(BaseHandler):
                             flips_v.append(flipv)
 
                     if not uploaded_paths:
-                        blank_img = Image.new("RGB", (600, 800), color=(255, 255, 255))
-                        tmp_p = os.path.join(UPLOAD_DIR, f"placeholder_{uuid.uuid4().hex}.jpg")
-                        blank_img.save(tmp_p)
-                        uploaded_paths = [tmp_p]
-                        manual_rots = [0]
-                        flips_h = [False]
-                        flips_v = [False]
+                        print(f"   ⏩ [SKIPPED] No file uploaded for '{doc_id}'", flush=True)
+                        continue
 
                     if doc_id == "signature":
                         final_kb = process_signature_image(
@@ -1311,6 +1298,14 @@ class ApiProcessWorkflowHandler(BaseHandler):
                     })
 
                 gc.collect()
+
+            if not processed_files_summary:
+                self.set_status(400)
+                self.write({
+                    "status": "error",
+                    "message": "No files were uploaded. Please upload at least one document to process."
+                })
+                return
 
             print("✅ [STEP 3 OK] All requested documents generated.", flush=True)
 
