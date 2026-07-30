@@ -361,8 +361,7 @@ class DocFlowApp {
     document.getElementById("homeView").style.display = "none";
     document.getElementById("workflowView").style.display = "block";
     document.getElementById("wfTitle").innerText = wf.title;
-    document.getElementById("uploadLockBanner").style.display = "block";
-    document.getElementById("applicantInfoCard").style.display = "none";
+    document.getElementById("applicantInfoCard").style.display = "block";
     document.getElementById("processingCard").style.display = "none";
     document.getElementById("resultCard").style.display = "none";
 
@@ -594,12 +593,7 @@ class DocFlowApp {
       }
     }
 
-    if (allReady) {
-      document.getElementById("uploadLockBanner").style.display = "none";
-      document.getElementById("applicantInfoCard").style.display = "block";
-      this.renderDocSummaryList();
-      this.showToast("All document slots filled! Applicant Details Unlocked.");
-    }
+    this.renderDocSummaryList();
   }
 
   async runOcrExtraction(file) {
