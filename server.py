@@ -738,15 +738,9 @@ class ApiLoginHandler(BaseHandler):
     async def post(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
-            body = {}
-            if self.request.body:
-                try:
-                    body = json.loads(self.request.body.decode('utf-8'))
-                except Exception:
-                    body = {}
-
-            username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
-            password = (body.get("password") or self.get_argument("password", default="") or self.get_body_argument("password", default="")).strip()
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            username = body.get("username", self.get_argument("username", default="")).strip()
+            password = body.get("password", self.get_argument("password", default="")).strip()
 
             if not username or not password:
                 self.set_status(400)
@@ -792,15 +786,9 @@ class ApiAddUserHandler(BaseHandler):
                 })
                 return
 
-            body = {}
-            if self.request.body:
-                try:
-                    body = json.loads(self.request.body.decode('utf-8'))
-                except Exception:
-                    body = {}
-
-            new_username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
-            new_password = (body.get("password") or body.get("passcode") or self.get_argument("password", default="") or self.get_body_argument("password", default="") or self.get_body_argument("passcode", default="")).strip()
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            new_username = body.get("username", self.get_argument("username", default="")).strip()
+            new_password = body.get("password", self.get_argument("password", default="")).strip()
 
             if not new_username or not new_password:
                 self.set_status(400)
@@ -842,14 +830,8 @@ class ApiRemoveUserHandler(BaseHandler):
                 })
                 return
 
-            body = {}
-            if self.request.body:
-                try:
-                    body = json.loads(self.request.body.decode('utf-8'))
-                except Exception:
-                    body = {}
-
-            target_username = (body.get("username") or self.get_argument("username", default="") or self.get_body_argument("username", default="")).strip()
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            target_username = body.get("username", self.get_argument("username", default="")).strip()
 
             if not target_username:
                 self.set_status(400)
@@ -1843,8 +1825,6 @@ class ApiAutoFillPdfHandler(BaseHandler):
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
-            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
-
 
 def make_app():
     return tornado.web.Application([

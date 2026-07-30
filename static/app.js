@@ -19,32 +19,13 @@ class DocFlowApp {
   }
 
   async init() {
-    await this.checkAuthStatus();
+    this.checkAuthStatus();
+    await this.fetchWorkflows();
+    this.renderServices();
   }
 
   // --- MEMBER AUTHENTICATION ENGINE ---
-  async checkAuthStatus() {
-    const token = localStorage.getItem("docflow_token");
-    const username = localStorage.getItem("docflow_username");
-
-    if (token && username) {
-      try {
-        const res = await fetch("/api/check_auth", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data.status === "success" && data.authenticated) {
-          this.authToken = token;
-          this.currentUser = username;
-          await this.fetchWorkflows();
-          this.renderServices();
-          this.showAuthenticatedApp();
-          return;
-        }
-      } catch (e) {
-        console.error("Auth check failed:", e);
-      }
-    }
+  checkAuthStatus() {
     this.logoutSilently();
   }
 
@@ -80,8 +61,6 @@ class DocFlowApp {
         localStorage.setItem("docflow_token", data.token);
         localStorage.setItem("docflow_username", data.username);
 
-        await this.fetchWorkflows();
-        this.renderServices();
         this.showAuthenticatedApp();
         this.showToast(`Welcome back, Officer ${data.username}! Access Granted.`);
       } else {
@@ -242,11 +221,7 @@ class DocFlowApp {
   // --- WORKFLOW & APP SERVICES ---
   async fetchWorkflows() {
     try {
-      const headers = {};
-      if (this.authToken) {
-        headers["Authorization"] = `Bearer ${this.authToken}`;
-      }
-      const res = await fetch("/api/workflows", { headers });
+      const res = await fetch("/api/workflows");
       const data = await res.json();
       if (data.status === "success") {
         this.workflows = data.workflows;
@@ -1822,9 +1797,6 @@ class DocFlowApp {
 
         this.showToast(`Auto-filled PDF created successfully (${data.file_size_kb} KB)! Download started.`);
       } else {
-        alert("Generation Error: " + data.message);
-      }
-    } catch (e) {
   }
 }
 
