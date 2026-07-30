@@ -1784,73 +1784,52 @@ class ApiFillAppointmentAcceptanceHandler(BaseHandler):
             
             for page_idx, page in enumerate(doc):
                 words = page.get_text("words")
-                lines_map = {}
+                words = sorted(words, key=lambda w: (round(w[1] / 10) * 10, w[0]))
+
                 for w in words:
-                    line_no = w[6]
-                    if line_no not in lines_map:
-                        lines_map[line_no] = []
-                    lines_map[line_no].append(w)
+                    w_str = w[4]
+                    if '_' in w_str:
+                        x0, y0, x1, y1 = w[0], w[1], w[2], w[3]
+                        val_to_fill = ""
 
-                sorted_line_nos = sorted(lines_map.keys())
-
-                for l_idx, l_no in enumerate(sorted_line_nos):
-                    line_words = lines_map[l_no]
-                    for w_i, w in enumerate(line_words):
-                        w_str = w[4]
-                        if '_' in w_str and len(w_str.replace('_', '')) < 3:
-                            x0, y0, x1, y1 = w[0], w[1], w[2], w[3]
-
-                            preceding_words = [w_prev[4] for w_prev in line_words[:w_i]]
-                            preceding_text = " ".join(preceding_words).strip()
-
-                            prev_line_text = ""
-                            if l_idx > 0:
-                                prev_line_no = sorted_line_nos[l_idx - 1]
-                                prev_line_text = " ".join([w_prev[4] for w_prev in lines_map[prev_line_no]]).strip()
-
-                            full_ctx = f"{prev_line_text} {preceding_text}".strip().lower()
-
-                            # Exclude signature lines completely
-                            if any(sig in full_ctx for sig in ["sincerely", "best regards", "regards,", "signature"]):
-                                continue
-
-                            val_to_fill = ""
-
-                            if "appointment letter" in full_ctx or (l_idx < 15 and "date" in full_ctx):
-                                if "date" in full_ctx:
-                                    val_to_fill = appointment_date
-                            
-                            if "acceptance letter" in full_ctx or (l_idx >= 15 and "date" in full_ctx):
-                                if "date" in full_ctx:
-                                    val_to_fill = acceptance_date
-
-                            if "dear" in full_ctx or "i," in full_ctx:
-                                val_to_fill = pharmacist_name
-                            
-                            if "effective from" in full_ctx or "joining" in full_ctx:
-                                val_to_fill = joining_date
-                            
-                            if "with best regards" in full_ctx or "proprietor" in full_ctx:
-                                if "regards" in full_ctx:
-                                    val_to_fill = proprietor_name
-                                else:
-                                    val_to_fill = medical_store_name
-
-                            if "at" in full_ctx and "pharmacist" in full_ctx:
+                        if y0 < 120:
+                            val_to_fill = appointment_date
+                        elif 130 <= y0 < 170:
+                            val_to_fill = medical_store_name
+                        elif 190 <= y0 < 225:
+                            val_to_fill = pharmacist_name
+                        elif 230 <= y0 < 265:
+                            val_to_fill = joining_date
+                        elif 360 <= y0 < 430:
+                            # Skip Appointment Letter signature lines
+                            continue
+                        elif 470 <= y0 < 510:
+                            val_to_fill = acceptance_date
+                        elif 540 <= y0 < 580:
+                            val_to_fill = medical_store_name
+                        elif 620 <= y0 < 645:
+                            val_to_fill = pharmacist_name
+                        elif 645 <= y0 < 680:
+                            if x0 < 300:
                                 val_to_fill = medical_store_name
+                            else:
+                                val_to_fill = joining_date
+                        elif y0 >= 680:
+                            # Skip Acceptance Letter signature lines
+                            continue
 
-                            if val_to_fill:
-                                rect = fitz.Rect(x0, y0, x1, y1)
-                                padded = fitz.Rect(rect.x0 - 1, rect.y0 - 2, rect.x1 + 1, rect.y1 + 2)
-                                page.draw_rect(padded, color=(1,1,1), fill=(1,1,1))
+                        if val_to_fill:
+                            rect = fitz.Rect(x0, y0, x1, y1)
+                            padded = fitz.Rect(rect.x0 - 1, rect.y0 - 2, rect.x1 + 1, rect.y1 + 2)
+                            page.draw_rect(padded, color=(1,1,1), fill=(1,1,1))
 
-                                avail_width = rect.width
-                                fontsize = 11
-                                estimated_width = len(val_to_fill) * 6.0
-                                if estimated_width > avail_width and avail_width > 20:
-                                    fontsize = max(8, int(11 * (avail_width / estimated_width)))
+                            avail_width = rect.width
+                            fontsize = 11
+                            estimated_width = len(val_to_fill) * 6.0
+                            if estimated_width > avail_width and avail_width > 20:
+                                fontsize = max(8, int(11 * (avail_width / estimated_width)))
 
-                                page.insert_text(fitz.Point(rect.x0 + 2, rect.y1 - 2), val_to_fill, fontsize=fontsize, fontname="helv", color=(0.06, 0.09, 0.16))
+                            page.insert_text(fitz.Point(rect.x0 + 2, rect.y1 - 2), val_to_fill, fontsize=fontsize, fontname="helv", color=(0.06, 0.09, 0.16))
 
             out_raw = os.path.join(job_dir, "raw_filled.pdf")
             doc.save(out_raw)
