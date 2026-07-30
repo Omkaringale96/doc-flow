@@ -341,7 +341,8 @@ def get_workflow_documents(workflow):
 # MSPC Password & Login ID Helper Functions
 # ----------------------------------------------------------------------
 def generate_mspc_password(name: str, dob_str: str) -> str:
-    clean_name = re.sub(r'[^A-Za-z]', '', str(name)).upper()
+    name_clean = re.sub(r'^(DR|MR|MRS|SHRI|SMT|KUMAR|MS)[\.\s]+', '', str(name).strip(), flags=re.IGNORECASE).strip()
+    clean_name = re.sub(r'[^A-Za-z]', '', name_clean).upper()
     prefix = clean_name[:3] if len(clean_name) >= 3 else (clean_name + "X" * (3 - len(clean_name)))
 
     day_str, month_str = "01", "01"

@@ -32,7 +32,7 @@
       <div class="user-pill" id="userPillContainer" style="display: none; align-items: center; gap: 0.5rem;">
         <i class="fa-solid fa-circle-user" style="color: var(--accent-green);"></i>
         <span id="loggedInUserLabel" style="font-weight: 700;">Officer</span>
-        <button type="button" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-blue);" onclick="docFlowApp.openAddMemberModal()">
+        <button type="button" class="btn-primary" id="addMemberNavBtn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--accent-blue);" onclick="docFlowApp.openAddMemberModal()">
           <i class="fa-solid fa-user-plus"></i> Add Member
         </button>
         <button type="button" class="btn-back" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; border-color: var(--accent-purple); color: var(--accent-purple);" onclick="docFlowApp.openHistoryModal()">
@@ -289,10 +289,18 @@
 
               <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Mobile / Email</span>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Mobile Number</span>
                   <strong id="resMobile" style="color: var(--text-bright); font-size: 0.8rem;">-</strong>
                 </div>
                 <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resMobile').innerText)">Copy</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted);">Email Address</span>
+                  <strong id="resEmail" style="color: var(--text-bright); font-size: 0.8rem;">-</strong>
+                </div>
+                <button class="btn-back" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('resEmail').innerText)">Copy</button>
               </div>
 
             </div>
@@ -883,9 +891,7 @@
 
       <div style="margin-top: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
-          <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">
-            Real-time submission records across all workflows (New Proprietorship & PPP Renewal) stored in Firebase Firestore and local logs:
-          </p>
+          <input type="text" id="historySearchInput" placeholder="🔍 Search by Applicant, Reg No, or Workflow..." style="flex: 1; max-width: 340px; padding: 0.4rem 0.8rem; font-size: 0.82rem; border-radius: 6px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.05); color: var(--text-bright);" oninput="docFlowApp.filterHistoryTable(this.value)">
           <button class="btn-back" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;" onclick="docFlowApp.loadHistoryData()">
             <i class="fa-solid fa-rotate"></i> Refresh Data
           </button>
