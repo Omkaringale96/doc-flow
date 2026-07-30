@@ -130,6 +130,50 @@
             </div>
           </div>
 
+          <!-- Live Quick Copy Credentials Box -->
+          <div style="margin-top: 1.2rem; background: rgba(139, 92, 246, 0.08); border: 1px solid var(--accent-purple); border-radius: 10px; padding: 1.1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-purple); display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-copy"></i> Live Quick Copy Credentials Interface
+              </h4>
+              <button class="btn-primary" style="font-size: 0.78rem; padding: 0.3rem 0.8rem; background: var(--accent-purple);" onclick="docFlowApp.copyAllStep2Credentials()">
+                <i class="fa-solid fa-clipboard"></i> Copy All Credentials
+              </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.6rem; font-size: 0.82rem;">
+              <div style="background: rgba(255,255,255,0.04); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted);">Applicant:</span>
+                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantName').value)">Copy Name</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted);">Pharmacy Reg:</span>
+                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('regNumber').value)">Copy Reg</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted);">DOB:</span>
+                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantDob').value)">Copy DOB</button>
+              </div>
+
+              <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid var(--accent-green); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--accent-green); font-weight: 700;">Password:</span>
+                <button type="button" class="btn-primary" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; background: var(--accent-green);" onclick="docFlowApp.copyStep2Password()">Copy Pass</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted);">Mobile:</span>
+                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantMobile').value)">Copy Mobile</button>
+              </div>
+
+              <div style="background: rgba(255,255,255,0.04); padding: 0.5rem 0.7rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted);">Email:</span>
+                <button type="button" class="btn-back" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="docFlowApp.copyTextToClipboard(document.getElementById('applicantEmail').value)">Copy Email</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Generated Documents Summary -->
           <div style="margin-top: 1.5rem;">
             <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem; color: var(--text-bright);">
@@ -140,13 +184,18 @@
             </div>
           </div>
 
-          <!-- Actions & Quick Redirect Button -->
-          <div class="action-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn-primary" id="processBtn" onclick="docFlowApp.processWorkflow()" style="flex: 1; padding: 0.9rem; font-size: 1.05rem;">
+          <!-- Actions & Quick Redirect Button Bar -->
+          <div class="action-bar" style="margin-top: 1.5rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
+            <button class="btn-primary" id="processBtn" onclick="docFlowApp.processWorkflow()" style="flex: 2; min-width: 220px; padding: 0.9rem; font-size: 1.05rem;">
               <i class="fa-solid fa-file-zipper"></i> Process & Generate ZIP File
             </button>
-            <button class="btn-back" id="helperModalBtn" onclick="docFlowApp.handleHelperBtnClick()" style="border-color: var(--accent-purple); color: var(--accent-purple);">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor Suite
+            
+            <button class="btn-primary" onclick="docFlowApp.openQuickCopyModal()" style="flex: 1; min-width: 180px; background: var(--accent-purple); color: #fff; padding: 0.9rem; font-size: 0.92rem;">
+              <i class="fa-solid fa-copy"></i> Quick Copy Credentials
+            </button>
+
+            <button class="btn-back" id="helperModalBtn" onclick="docFlowApp.handleHelperBtnClick()" style="flex: 1; min-width: 180px; border-color: var(--accent-blue); color: var(--accent-blue); padding: 0.9rem; font-size: 0.92rem;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor
             </button>
           </div>
         </div>

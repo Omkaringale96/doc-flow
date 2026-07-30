@@ -662,6 +662,49 @@ class DocFlowApp {
     }
   }
 
+  openQuickCopyModal() {
+    this.openMspcRedirectModal();
+  }
+
+  calculateStep2Password() {
+    const name = document.getElementById("applicantName")?.value.trim() || "";
+    const dob = document.getElementById("applicantDob")?.value.trim() || "";
+    if (name && dob) {
+      let cleanName = name.replace(/[^A-Za-z]/g, '').toUpperCase();
+      let prefix = cleanName.substring(0, 3);
+      let dobParts = dob.split('/');
+      let day = dobParts[0] || "01";
+      let month = dobParts[1] || "01";
+      return `${prefix}${day}${month}`;
+    }
+    return "";
+  }
+
+  copyStep2Password() {
+    const pass = this.calculateStep2Password();
+    if (pass) {
+      this.copyTextToClipboard(pass);
+      this.showToast(`Copied Password: ${pass}`);
+    } else {
+      this.showToast("Please enter Applicant Name and DOB to calculate password.");
+    }
+  }
+
+  copyAllStep2Credentials() {
+    const name = document.getElementById("applicantName")?.value.trim() || "";
+    const regNo = document.getElementById("regNumber")?.value.trim() || "";
+    const dob = document.getElementById("applicantDob")?.value.trim() || "";
+    const mobile = document.getElementById("applicantMobile")?.value.trim() || "";
+    const email = document.getElementById("applicantEmail")?.value.trim() || "";
+    const loginId = document.getElementById("applicantLoginId")?.value.trim() || "";
+    const pass = this.calculateStep2Password();
+
+    const fullText = `Applicant Name       : ${name}\nPharmacy Reg Number  : ${regNo}\nDate of Birth        : ${dob}\nCalculated Password : ${pass}\nMobile Number        : ${mobile}\nEmail Address        : ${email}\nMSPC Login ID        : ${loginId}`;
+
+    this.copyTextToClipboard(fullText);
+    this.showToast("Copied all Step 2 credentials to clipboard!");
+  }
+
   openMspcRedirectModal() {
     const name = document.getElementById("applicantName")?.value.trim() || "";
     const regNo = document.getElementById("regNumber")?.value.trim() || "";
