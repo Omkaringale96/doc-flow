@@ -366,12 +366,17 @@ class DocFlowApp {
     document.getElementById("resultCard").style.display = "none";
 
     const helperBtn = document.getElementById("helperModalBtn");
-    if (helperBtn) {
-      if (wf.id === "new_proprietorship_drug_license") {
-        helperBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor Suite';
-      } else {
-        helperBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> MSPC Login Helper';
-      }
+    const quickCopyBtn = document.getElementById("quickCopyBtn");
+    const resCardTitle = document.getElementById("resCardTitle");
+
+    if (wf.id === "new_proprietorship_drug_license") {
+      if (helperBtn) helperBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor Suite';
+      if (quickCopyBtn) quickCopyBtn.style.display = "none";
+      if (resCardTitle) resCardTitle.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Sejda PDF Editor Suite & Package Actions';
+    } else {
+      if (helperBtn) helperBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> MSPC Login Helper';
+      if (quickCopyBtn) quickCopyBtn.style.display = "inline-flex";
+      if (resCardTitle) resCardTitle.innerHTML = '<i class="fa-solid fa-copy"></i> Copy-Paste Assistant & MSPC Credentials';
     }
 
     this.renderDocUploadGrid();
