@@ -186,6 +186,53 @@ class DocFlowApp {
     }
   }
 
+  switchPdfSubTab(subTab) {
+    const mCard = document.getElementById("pdfSubTabMerge");
+    const eCard = document.getElementById("pdfSubTabEdit");
+    const cCard = document.getElementById("pdfSubTabCompress");
+
+    const mBtn = document.getElementById("subTabMergeBtn");
+    const eBtn = document.getElementById("subTabEditBtn");
+    const cBtn = document.getElementById("subTabCompressBtn");
+
+    if (!mCard || !eCard || !cCard) return;
+
+    if (subTab === "merge") {
+      mCard.style.display = "block";
+      eCard.style.display = "none";
+      cCard.style.display = "none";
+
+      mBtn.className = "btn-primary";
+      mBtn.style.background = "#ef4444";
+      eBtn.className = "btn-back";
+      eBtn.style.background = "";
+      cBtn.className = "btn-back";
+      cBtn.style.background = "";
+    } else if (subTab === "edit") {
+      mCard.style.display = "none";
+      eCard.style.display = "block";
+      cCard.style.display = "none";
+
+      mBtn.className = "btn-back";
+      mBtn.style.background = "";
+      eBtn.className = "btn-primary";
+      eBtn.style.background = "var(--accent-green)";
+      cBtn.className = "btn-back";
+      cBtn.style.background = "";
+    } else if (subTab === "compress") {
+      mCard.style.display = "none";
+      eCard.style.display = "none";
+      cCard.style.display = "block";
+
+      mBtn.className = "btn-back";
+      mBtn.style.background = "";
+      eBtn.className = "btn-back";
+      eBtn.style.background = "";
+      cBtn.className = "btn-primary";
+      cBtn.style.background = "var(--accent-blue)";
+    }
+  }
+
   getWorkflowDocs() {
     if (!this.activeWf) return [];
     if (this.activeWf.sections) {

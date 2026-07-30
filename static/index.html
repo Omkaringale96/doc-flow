@@ -223,13 +223,70 @@
     <!-- STANDALONE PDF EDITOR TAB -->
     <section id="pdfEditorTab" style="display: none;">
       <div class="hero-header">
-        <h1>Standalone Multi-Page PDF Utility Engine</h1>
-        <p>Merge multiple images into a single PDF, rotate pages, auto-deblur, and compress strictly below your target KB limit.</p>
+        <h1>Standalone PDF Utility & Editing Suite</h1>
+        <p>Access professional PDF tools: Merge PDFs with iLovePDF, edit text and annotate with Sejda, or compress with DocFlow Engine.</p>
       </div>
 
-      <div class="doc-card" style="max-width: 800px; margin: 0 auto;">
-        <h3><i class="fa-solid fa-file-pdf" style="color: var(--accent-blue);"></i> Create Custom PDF Package</h3>
-        
+      <!-- Tool Sub-Navigation Pills -->
+      <div style="display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.8rem; flex-wrap: wrap;">
+        <button type="button" class="btn-primary" id="subTabMergeBtn" onclick="docFlowApp.switchPdfSubTab('merge')" style="background: #ef4444;">
+          <i class="fa-solid fa-code-merge"></i> iLovePDF Merge Tool
+        </button>
+        <button type="button" class="btn-back" id="subTabEditBtn" onclick="docFlowApp.switchPdfSubTab('edit')">
+          <i class="fa-solid fa-pen-to-square"></i> Sejda PDF Editor
+        </button>
+        <button type="button" class="btn-back" id="subTabCompressBtn" onclick="docFlowApp.switchPdfSubTab('compress')">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> DocFlow Compressor & Compiler
+        </button>
+      </div>
+
+      <!-- SECTION 1: iLovePDF MERGE TOOL -->
+      <div id="pdfSubTabMerge" class="doc-card" style="max-width: 960px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-file-pdf"></i> iLovePDF Merge Engine
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Merge multiple PDF files in your preferred order using iLovePDF cloud tool.
+            </p>
+          </div>
+          <a href="https://www.ilovepdf.com/merge_pdf" target="_blank" class="btn-primary" style="background: #ef4444; text-decoration: none; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open iLovePDF in New Tab
+          </a>
+        </div>
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glass-glow); background: #fff; height: 600px;">
+          <iframe src="https://www.ilovepdf.com/merge_pdf" style="width: 100%; height: 100%; border: none;" title="iLovePDF Merge Tool"></iframe>
+        </div>
+      </div>
+
+      <!-- SECTION 2: SEJDA PDF EDITOR TOOL -->
+      <div id="pdfSubTabEdit" class="doc-card" style="display: none; max-width: 960px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-green); display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-pen-to-square"></i> Sejda PDF Editor Engine
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Edit text, add annotations, insert signatures, crop, fill forms, and redact PDF documents online.
+            </p>
+          </div>
+          <a href="https://www.sejda.com/pdf-editor" target="_blank" class="btn-primary" style="background: var(--accent-green); text-decoration: none; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Sejda in New Tab
+          </a>
+        </div>
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glass-glow); background: #fff; height: 650px;">
+          <iframe src="https://www.sejda.com/pdf-editor" style="width: 100%; height: 100%; border: none;" title="Sejda PDF Editor"></iframe>
+        </div>
+      </div>
+
+      <!-- SECTION 3: DOCFLOW CUSTOM COMPRESSOR & COMPILER -->
+      <div id="pdfSubTabCompress" class="doc-card" style="display: none; max-width: 800px; margin: 0 auto;">
+        <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> DocFlow Pro Custom PDF Compressor</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Combine images/PDFs and compress strictly below your target KB limit with rotation and deblur support.
+        </p>
+
         <div class="form-group" style="margin-top: 1rem;">
           <label>Target File Name</label>
           <input type="text" id="pdfCustomName" value="Custom_Document.pdf">
@@ -237,12 +294,12 @@
 
         <div class="form-group">
           <label>Max Target File Size (KB)</label>
-          <input type="number" id="pdfCustomMaxKb" value="100">
+          <input type="number" id="pdfCustomMaxKb" value="125">
         </div>
 
         <div class="drop-zone" id="pdfDropZone" onclick="document.getElementById('pdfCustomFiles').click()">
           <i class="fa-solid fa-file-circle-plus" style="font-size: 2.5rem; color: var(--accent-blue); margin-bottom: 0.8rem;"></i>
-          <p style="font-weight: 600;">Click to select multiple images/documents</p>
+          <p style="font-weight: 600;">Click to select images or PDF files</p>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Supports JPG, PNG, WEBP, PDF</p>
           <input type="file" id="pdfCustomFiles" multiple accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handlePdfCustomFiles(this.files)">
         </div>
@@ -251,7 +308,7 @@
 
         <div style="margin-top: 1.5rem; text-align: right;">
           <button class="btn-primary" onclick="docFlowApp.buildCustomPdf()">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate & Download PDF
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate & Download Compressed PDF
           </button>
         </div>
       </div>
