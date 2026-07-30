@@ -630,21 +630,23 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
 
     quality = 92
     scale_factor = 1.0
+    a4_rect = fitz.Rect(0, 0, 595.28, 841.89)
 
     while True:
-        temp_imgs = []
+        out_doc = fitz.open()
         for img in images:
             w_dim, h_dim = int(img.width * scale_factor), int(img.height * scale_factor)
             resized = img.resize((max(1, w_dim), max(1, h_dim)), Image.Resampling.LANCZOS)
-            temp_imgs.append(resized)
 
-        temp_imgs[0].save(
-            output_path, "PDF",
-            save_all=True,
-            append_images=temp_imgs[1:],
-            resolution=300.0, # High 300 DPI Output!
-            quality=quality
-        )
+            buf = BytesIO()
+            resized.save(buf, format="JPEG", quality=quality)
+            img_bytes = buf.getvalue()
+
+            page = out_doc.new_page(width=595.28, height=841.89)
+            page.insert_image(a4_rect, stream=img_bytes)
+
+        out_doc.save(output_path, garbage=4, deflate=True, clean=True)
+        out_doc.close()
 
         size_kb = os.path.getsize(output_path) / 1024.0
         if size_kb <= max_kb or (quality <= 30 and scale_factor <= 0.45):
@@ -655,7 +657,7 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
         else:
             scale_factor *= 0.88
 
-    del images, temp_imgs
+    del images
     gc.collect()
 
     return os.path.getsize(output_path) / 1024.0, len(valid_paths)
