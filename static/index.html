@@ -140,13 +140,13 @@
             </div>
           </div>
 
-          <!-- Actions & MSPC Quick Redirect Button -->
+          <!-- Actions & Quick Redirect Button -->
           <div class="action-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
             <button class="btn-primary" id="processBtn" onclick="docFlowApp.processWorkflow()" style="flex: 1; padding: 0.9rem; font-size: 1.05rem;">
               <i class="fa-solid fa-file-zipper"></i> Process & Generate ZIP File
             </button>
-            <button class="btn-back" onclick="docFlowApp.openMspcRedirectModal()" style="border-color: var(--accent-purple); color: var(--accent-purple);">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i> MSPC Login Helper
+            <button class="btn-back" id="helperModalBtn" onclick="docFlowApp.handleHelperBtnClick()" style="border-color: var(--accent-purple); color: var(--accent-purple);">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor Suite
             </button>
           </div>
         </div>
@@ -245,14 +245,14 @@
 
             </div>
 
-            <!-- Seamless 2-Step Action Redirect Buttons -->
+            <!-- Seamless Action Redirect Buttons -->
             <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-              <button class="btn-primary" style="flex: 1; min-width: 220px; font-size: 0.92rem; background: var(--accent-purple); padding: 0.7rem;" onclick="docFlowApp.redirectToSejdaEditor()">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Step 2: Edit/Merge in Sejda Editor
+              <button class="btn-primary" id="sejdaRedirectBtn" style="flex: 1; min-width: 220px; font-size: 0.92rem; background: var(--accent-purple); padding: 0.7rem;" onclick="docFlowApp.redirectToSejdaEditor()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Edit / Merge in Sejda PDF Editor Suite
               </button>
 
-              <a href="https://online.mspcindia.org/" target="_blank" class="btn-primary" style="flex: 1; min-width: 220px; text-align: center; text-decoration: none; font-size: 0.92rem; background: var(--accent-green); padding: 0.7rem;">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> Step 3: Open MSPC Portal & Login
+              <a href="https://online.mspcindia.org/" target="_blank" id="mspcPortalRedirectBtn" class="btn-primary" style="flex: 1; min-width: 220px; text-align: center; text-decoration: none; font-size: 0.92rem; background: var(--accent-green); padding: 0.7rem;">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open MSPC Portal & Login
               </a>
             </div>
 

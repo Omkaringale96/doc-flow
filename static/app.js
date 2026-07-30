@@ -365,6 +365,15 @@ class DocFlowApp {
     document.getElementById("processingCard").style.display = "none";
     document.getElementById("resultCard").style.display = "none";
 
+    const helperBtn = document.getElementById("helperModalBtn");
+    if (helperBtn) {
+      if (wf.id === "new_proprietorship_drug_license") {
+        helperBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Open Sejda PDF Editor Suite';
+      } else {
+        helperBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> MSPC Login Helper';
+      }
+    }
+
     this.renderDocUploadGrid();
   }
 
@@ -645,6 +654,14 @@ class DocFlowApp {
     list.innerHTML = html;
   }
 
+  handleHelperBtnClick() {
+    if (this.activeWf && this.activeWf.id === "new_proprietorship_drug_license") {
+      this.redirectToSejdaEditor();
+    } else {
+      this.openMspcRedirectModal();
+    }
+  }
+
   openMspcRedirectModal() {
     const name = document.getElementById("applicantName")?.value.trim() || "";
     const regNo = document.getElementById("regNumber")?.value.trim() || "";
@@ -911,6 +928,22 @@ class DocFlowApp {
         zipBtn.download = data.zip_filename;
         document.getElementById("zipFileNameLabel").innerText = data.zip_filename;
         document.getElementById("zipFileSizeLabel").innerText = `Package Size: ${data.zip_size_kb} KB`;
+
+        const mspcBtn = document.getElementById("mspcPortalRedirectBtn");
+        const sejdaBtn = document.getElementById("sejdaRedirectBtn");
+        if (this.activeWf && this.activeWf.id === "new_proprietorship_drug_license") {
+          if (mspcBtn) mspcBtn.style.display = "none";
+          if (sejdaBtn) {
+            sejdaBtn.style.display = "block";
+            sejdaBtn.style.flex = "1";
+          }
+        } else {
+          if (mspcBtn) mspcBtn.style.display = "block";
+          if (sejdaBtn) {
+            sejdaBtn.style.display = "block";
+            sejdaBtn.style.flex = "1";
+          }
+        }
 
         if (data.mspc_credentials) {
           const c = data.mspc_credentials;
