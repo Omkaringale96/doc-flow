@@ -222,155 +222,149 @@
       </div>
     </section>
 
-    <!-- PDF STUDIO STANDALONE SUITE -->
+    <!-- STANDALONE PDF UTILITY SUITE (3 SECTIONS: 1. SEJDA, 2. iLOVEPDF, 3. DOCFLOW STUDIO) -->
     <section id="pdfEditorTab" style="display: none;">
-      
-      <!-- PDF Studio Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem; background: rgba(15, 23, 42, 0.6); padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--border-glass);">
-        <div>
-          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-bright); display: flex; align-items: center; gap: 0.6rem;">
-            <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> PDF Studio
-          </h2>
-          <span style="font-size: 0.8rem; color: var(--text-muted);">Original Open-Source Web PDF Editor Suite</span>
-        </div>
-
-        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-          <input type="file" id="pdfStudioFileInput" accept="application/pdf" style="display: none;" onchange="docFlowApp.loadPdfIntoStudio(this.files)">
-          <button type="button" class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
-            <i class="fa-solid fa-folder-open"></i> Open PDF
-          </button>
-          
-          <button type="button" class="btn-back" onclick="docFlowApp.exportStudioPdf()" style="padding: 0.45rem 1rem; font-size: 0.85rem; border-color: var(--accent-green); color: var(--accent-green);">
-            <i class="fa-solid fa-download"></i> Export PDF
-          </button>
-
-          <a href="https://www.sejda.com/pdf-editor" target="_blank" class="btn-primary" style="background: var(--accent-green); text-decoration: none; padding: 0.45rem 1rem; font-size: 0.85rem;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Sejda Website
-          </a>
-
-          <button type="button" id="studioReturnWfBtn" onclick="docFlowApp.saveAndReturnToWorkflow()" class="btn-primary" style="display: none; padding: 0.45rem 1rem; font-size: 0.85rem; background: var(--accent-purple);">
-            <i class="fa-solid fa-check-double"></i> Save & Return to Workflow
-          </button>
-        </div>
+      <div class="hero-header" style="margin-bottom: 1.2rem;">
+        <h1>PDF Utility & Editing Suite</h1>
+        <p>Access professional PDF tools across 3 dedicated suites: Sejda PDF Editor, iLovePDF Merge, or DocFlow PDF Studio & Compressor.</p>
       </div>
 
-      <!-- Studio Empty State Dropzone -->
-      <div id="studioEmptyState" class="doc-card" style="text-align: center; padding: 2.5rem 1.5rem; max-width: 700px; margin: 1.5rem auto;">
-        <i class="fa-solid fa-file-pdf" style="font-size: 3.5rem; color: var(--accent-blue); margin-bottom: 1rem;"></i>
-        <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">Select a PDF Document to Edit in PDF Studio</h3>
-        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
-          Drag & drop page thumbnails, edit text overlays, e-sign, whiteout sections, and compress output PDFs.
-        </p>
-        <button class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.8rem 1.8rem; font-size: 1rem;">
-          <i class="fa-solid fa-folder-open"></i> Browse & Load PDF
+      <!-- 3 Sub-Section Navigation Pills -->
+      <div style="display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.8rem; flex-wrap: wrap;">
+        <button type="button" class="btn-primary" id="subTabSejdaBtn" onclick="docFlowApp.switchPdfSubTab('sejda')" style="background: var(--accent-green);">
+          <i class="fa-solid fa-pen-to-square"></i> 1. Sejda PDF Editor
+        </button>
+        <button type="button" class="btn-back" id="subTabILovePdfBtn" onclick="docFlowApp.switchPdfSubTab('ilovepdf')">
+          <i class="fa-solid fa-code-merge"></i> 2. iLovePDF Merge Tool
+        </button>
+        <button type="button" class="btn-back" id="subTabDocFlowBtn" onclick="docFlowApp.switchPdfSubTab('docflow')">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 3. DocFlow PDF Studio & Compressor
         </button>
       </div>
 
-      <!-- Native PDF Merge Tool with Desired Target KB Output Size -->
-      <div id="pdfMergeToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-blue);">
-        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-code-merge"></i> Native PDF Merge Tool & Target Size Compressor
-        </h3>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
-          Upload multiple PDF or image files, specify your desired maximum target output size (e.g. 125 KB, 150 KB, 250 KB), and merge them into a single compressed PDF.
-        </p>
+      <!-- SECTION 1: SEJDA PDF EDITOR -->
+      <div id="pdfSubTabSejda" class="doc-card" style="max-width: 980px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-green); display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-pen-to-square"></i> Sejda PDF Editor Suite
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Edit PDF text, add signatures, whiteout sections, and organize documents directly with Sejda.
+            </p>
+          </div>
+          <a href="https://www.sejda.com/pdf-editor" target="_blank" class="btn-primary" style="background: var(--accent-green); text-decoration: none; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Sejda in New Tab
+          </a>
+        </div>
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glass-glow); background: #fff; height: 620px;">
+          <iframe src="https://www.sejda.com/pdf-editor" style="width: 100%; height: 100%; border: none;" title="Sejda PDF Editor"></iframe>
+        </div>
+      </div>
 
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
-          <div style="flex: 1; min-width: 250px;">
-            <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Files to Merge (PDF / Images):</label>
-            <input type="file" id="mergeInputFiles" multiple accept="application/pdf,image/*" style="font-size: 0.85rem;" onchange="docFlowApp.handleMergeFilesSelected(this.files)">
+      <!-- SECTION 2: iLOVEPDF MERGE TOOL -->
+      <div id="pdfSubTabILovePdf" class="doc-card" style="display: none; max-width: 980px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-file-pdf"></i> iLovePDF Merge Engine
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Combine multiple PDF files into a single document in your preferred page order.
+            </p>
+          </div>
+          <a href="https://www.ilovepdf.com/merge_pdf" target="_blank" class="btn-primary" style="background: #ef4444; text-decoration: none; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open iLovePDF in New Tab
+          </a>
+        </div>
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glass-glow); background: #fff; height: 620px;">
+          <iframe src="https://www.ilovepdf.com/merge_pdf" style="width: 100%; height: 100%; border: none;" title="iLovePDF Merge Tool"></iframe>
+        </div>
+      </div>
+
+      <!-- SECTION 3: DOCFLOW NATIVE PDF STUDIO & COMPRESSOR SUITE -->
+      <div id="pdfSubTabDocFlow" style="display: none;">
+        
+        <!-- PDF Studio Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem; background: rgba(15, 23, 42, 0.6); padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--border-glass);">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-bright); display: flex; align-items: center; gap: 0.6rem;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> DocFlow Native PDF Studio
+            </h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Original Open-Source Web PDF Editor Suite</span>
           </div>
 
-          <div style="width: 180px;">
-            <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Desired Output Size (KB):</label>
-            <select id="mergeTargetKb" style="font-size: 0.85rem; width: 100%;">
-              <option value="125" selected>125 KB (Standard)</option>
-              <option value="150">150 KB</option>
-              <option value="200">200 KB</option>
-              <option value="300">300 KB</option>
-              <option value="500">500 KB</option>
-            </select>
-          </div>
+          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <input type="file" id="pdfStudioFileInput" accept="application/pdf" style="display: none;" onchange="docFlowApp.loadPdfIntoStudio(this.files)">
+            <button type="button" class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
+              <i class="fa-solid fa-folder-open"></i> Open PDF
+            </button>
+            
+            <button type="button" class="btn-back" onclick="docFlowApp.exportStudioPdf()" style="padding: 0.45rem 1rem; font-size: 0.85rem; border-color: var(--accent-green); color: var(--accent-green);">
+              <i class="fa-solid fa-download"></i> Export PDF
+            </button>
 
-          <div style="align-self: flex-end;">
-            <button type="button" class="btn-primary" onclick="docFlowApp.executeMergePdfs()" style="padding: 0.55rem 1.2rem; font-size: 0.88rem; background: var(--accent-blue);">
-              <i class="fa-solid fa-file-export"></i> Merge & Compress PDFs
+            <button type="button" id="studioReturnWfBtn" onclick="docFlowApp.saveAndReturnToWorkflow()" class="btn-primary" style="display: none; padding: 0.45rem 1rem; font-size: 0.85rem; background: var(--accent-purple);">
+              <i class="fa-solid fa-check-double"></i> Save & Return to Workflow
             </button>
           </div>
         </div>
 
-        <div id="mergeFilesSelectedList" style="font-size: 0.78rem; color: var(--text-muted);"></div>
-      </div>
+        <!-- Studio Empty State Dropzone -->
+        <div id="studioEmptyState" class="doc-card" style="text-align: center; padding: 2.5rem 1.5rem; max-width: 700px; margin: 1.5rem auto;">
+          <i class="fa-solid fa-file-pdf" style="font-size: 3.5rem; color: var(--accent-blue); margin-bottom: 1rem;"></i>
+          <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">Select a PDF Document to Edit in PDF Studio</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            Drag & drop page thumbnails, edit text overlays, e-sign, whiteout sections, and compress output PDFs.
+          </p>
+          <button class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.8rem 1.8rem; font-size: 1rem;">
+            <i class="fa-solid fa-folder-open"></i> Browse & Load PDF
+          </button>
+        </div>
 
-      <!-- Dedicated Appointment & Acceptance Letter Auto-Fill Card -->
-      <div id="appointmentLetterToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-purple);">
-        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
-          <i class="fa-solid fa-file-signature"></i> Appointment & Acceptance Letter Auto-Fill Tool
-        </h3>
-        <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-          Dedicated Auto-Fill Tool tailored specifically for the <strong>Appointment & Acceptance Letter</strong> document. Enter details below to generate the formatted, compressed PDF document instantly.
-        </p>
+        <!-- Native PDF Merge Tool with Desired Target KB Output Size -->
+        <div id="pdfMergeToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-blue);">
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-code-merge"></i> Native PDF Merge Tool & Target Size Compressor
+          </h3>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Upload multiple PDF or image files, specify your desired maximum target output size (e.g. 125 KB, 150 KB, 250 KB), and merge them into a single compressed PDF.
+          </p>
 
-        <form id="appointmentLetterForm" onsubmit="event.preventDefault(); docFlowApp.generateAppointmentLetter();">
-          
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1.2rem;">
-            
-            <!-- APPOINTMENT LETTER SECTION -->
-            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
-                <i class="fa-solid fa-file-contract"></i> Appointment Letter Details
-              </h4>
-              
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Appointment Date</label>
-                <input type="date" id="appt_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Pharmacist Name</label>
-                <input type="text" id="appt_pharmacist_name" class="form-control" placeholder="Full Pharmacist Name" style="font-size: 0.85rem; width: 100%;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Joining Date / Effective From</label>
-                <input type="date" id="appt_joining_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Proprietor Name</label>
-                <input type="text" id="appt_proprietor_name" class="form-control" placeholder="Proprietor Full Name" style="font-size: 0.85rem; width: 100%;">
-              </div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
+            <div style="flex: 1; min-width: 250px;">
+              <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Files to Merge (PDF / Images):</label>
+              <input type="file" id="mergeInputFiles" multiple accept="application/pdf,image/*" style="font-size: 0.85rem;" onchange="docFlowApp.handleMergeFilesSelected(this.files)">
             </div>
 
-            <!-- ACCEPTANCE LETTER SECTION -->
-            <div style="background: rgba(15, 23, 42, 0.5); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-glass);">
-              <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--accent-green); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.3rem;">
-                <i class="fa-solid fa-circle-check"></i> Acceptance Letter Details
-              </h4>
+            <div style="width: 180px;">
+              <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Desired Output Size (KB):</label>
+              <select id="mergeTargetKb" style="font-size: 0.85rem; width: 100%;">
+                <option value="125" selected>125 KB (Standard)</option>
+                <option value="150">150 KB</option>
+                <option value="200">200 KB</option>
+                <option value="300">300 KB</option>
+                <option value="500">500 KB</option>
+              </select>
+            </div>
 
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Acceptance Date</label>
-                <input type="date" id="acc_date" class="form-control" style="font-size: 0.85rem; width: 100%;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Medical Store Name & Address</label>
-                <input type="text" id="acc_store_name" class="form-control" placeholder="e.g. Krishna Generic Medical and General Stores" style="font-size: 0.85rem; width: 100%;">
-              </div>
-
-              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); border-radius: 8px; padding: 0.8rem; margin-top: 1rem; font-size: 0.75rem; color: var(--text-bright);">
-                <i class="fa-solid fa-shield-halved" style="color: var(--accent-green);"></i> <strong>Notice:</strong> Pharmacist Name is automatically synced across both letters. Signature lines remain 100% blank as per original design.
-              </div>
+            <div style="align-self: flex-end;">
+              <button type="button" class="btn-primary" onclick="docFlowApp.executeMergePdfs()" style="padding: 0.55rem 1.2rem; font-size: 0.88rem; background: var(--accent-blue);">
+                <i class="fa-solid fa-file-export"></i> Merge & Compress PDFs
+              </button>
             </div>
           </div>
 
-          <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
-            <button type="submit" class="btn-primary" style="padding: 0.65rem 1.8rem; font-size: 0.92rem; background: var(--accent-purple);">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Filled Appointment & Acceptance Letter (PDF)
-            </button>
-          </div>
-        </form>
+          <div id="mergeFilesSelectedList" style="font-size: 0.78rem; color: var(--text-muted);"></div>
+        </div>
+
+        <!-- PDF Studio Workspace (3-Column Layout) -->
+        <div id="pdfStudioWorkspace" style="display: none;">
+          <!-- 3 Column grid -->
+        </div>
+
       </div>
+    </section>
 
       <!-- PDF Studio Main Workspace (3-Column Layout) -->
       <div id="pdfStudioWorkspace" style="display: none;">
@@ -553,36 +547,55 @@
   </div>
 
   <!-- MODAL: ADD AUTHORIZED MEMBER MODAL -->
+  <!-- MEMBER MANAGEMENT MODAL (ADMINISTRATOR DATTA ONLY) -->
   <div id="addMemberModalContainer" class="modal-backdrop" style="display: none;">
-    <div class="modal-card" style="max-width: 460px; border-color: var(--accent-purple);">
+    <div class="modal-card" style="max-width: 480px; border-color: var(--accent-purple);">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-user-plus" style="color: var(--accent-purple);"></i> Add Authorized Member</h3>
+        <h3><i class="fa-solid fa-user-gear" style="color: var(--accent-purple);"></i> Administrator Member Management</h3>
         <button class="btn-close" onclick="docFlowApp.closeAddMemberModal()">&times;</button>
       </div>
 
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Only existing logged-in authorized members can register new members.
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <i class="fa-solid fa-shield-halved" style="color: var(--accent-purple);"></i> Only Administrator <strong>Datta</strong> is authorized to add or remove team members.
       </p>
 
       <div id="addMemberMsg" style="display: none; padding: 0.6rem; border-radius: 6px; font-size: 0.82rem; margin-bottom: 1rem;"></div>
 
-      <form onsubmit="docFlowApp.handleAddMember(event)">
+      <!-- Add Member Form -->
+      <form onsubmit="docFlowApp.handleAddMember(event)" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1.2rem;">
+        <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-user-plus"></i> Add New Authorized Member
+        </h4>
+        
+        <div class="form-group" style="margin-bottom: 0.8rem;">
+          <label style="font-size: 0.8rem; font-weight: 600;">New Member Username</label>
+          <input type="text" id="newMemberUsername" class="form-control" placeholder="e.g. Officer_Ramesh" required style="width: 100%;">
+        </div>
+
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label style="font-size: 0.85rem; font-weight: 600;">New Member Username</label>
-          <input type="text" id="newMemberUsername" placeholder="e.g. Officer_Ramesh" required>
+          <label style="font-size: 0.8rem; font-weight: 600;">New Member Password</label>
+          <input type="password" id="newMemberPassword" class="form-control" placeholder="Set Password" required style="width: 100%;">
         </div>
 
-        <div class="form-group" style="margin-bottom: 1.2rem;">
-          <label style="font-size: 0.85rem; font-weight: 600;">New Member Password</label>
-          <input type="password" id="newMemberPassword" placeholder="Set Password" required>
+        <button type="submit" class="btn-primary" style="width: 100%; font-size: 0.88rem; background: var(--accent-blue);">
+          <i class="fa-solid fa-user-plus"></i> Add Authorized Member
+        </button>
+      </form>
+
+      <!-- Remove Member Form -->
+      <form onsubmit="docFlowApp.handleRemoveMember(event)">
+        <h4 style="font-size: 0.88rem; font-weight: 700; color: #ef4444; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-user-minus"></i> Remove Member Access
+        </h4>
+        
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="font-size: 0.8rem; font-weight: 600;">Username to Remove</label>
+          <input type="text" id="removeMemberUsername" class="form-control" placeholder="e.g. Vinayak" required style="width: 100%;">
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
-          <button type="button" class="btn-back" onclick="docFlowApp.closeAddMemberModal()">Cancel</button>
-          <button type="submit" class="btn-primary" style="background: var(--accent-purple);">
-            <i class="fa-solid fa-user-check"></i> Add Member
-          </button>
-        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; font-size: 0.88rem; background: #ef4444;">
+          <i class="fa-solid fa-user-xmark"></i> Remove Member
+        </button>
       </form>
     </div>
   </div>

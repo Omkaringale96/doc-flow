@@ -771,11 +771,11 @@ class ApiAddUserHandler(BaseHandler):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
             current_user = self.get_current_user_name()
-            if not current_user:
+            if current_user != "Datta":
                 self.set_status(403)
                 self.write({
                     "status": "error",
-                    "message": "Unauthorized! Only existing authorized members can add new members."
+                    "message": "Unauthorized! Only Administrator Datta can add new members."
                 })
                 return
 
@@ -797,10 +797,58 @@ class ApiAddUserHandler(BaseHandler):
             users_db[new_username] = new_password
             save_users(users_db)
 
-            print(f"🔑 Authorized member '{current_user}' created new member '{new_username}'", flush=True)
+            print(f"🔑 Administrator Datta created new member '{new_username}'", flush=True)
             self.write({
                 "status": "success",
                 "message": f"Authorized member '{new_username}' added successfully!",
+                "members_count": len(users_db)
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiRemoveUserHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            current_user = self.get_current_user_name()
+            if current_user != "Datta":
+                self.set_status(403)
+                self.write({
+                    "status": "error",
+                    "message": "Unauthorized! Only Administrator Datta can remove members."
+                })
+                return
+
+            body = json.loads(self.request.body.decode('utf-8')) if self.request.body else {}
+            target_username = body.get("username", self.get_argument("username", default="")).strip()
+
+            if not target_username:
+                self.set_status(400)
+                self.write({"status": "error", "message": "Username to remove is required."})
+                return
+
+            if target_username == "Datta":
+                self.set_status(400)
+                self.write({"status": "error", "message": "Cannot remove primary Administrator Datta!"})
+                return
+
+            users_db = load_users()
+            if target_username not in users_db:
+                self.set_status(404)
+                self.write({"status": "error", "message": f"Member '{target_username}' not found."})
+                return
+
+            del users_db[target_username]
+            save_users(users_db)
+
+            print(f"🔑 Administrator Datta removed member '{target_username}'", flush=True)
+            self.write({
+                "status": "success",
+                "message": f"Member '{target_username}' removed successfully!",
                 "members_count": len(users_db)
             })
 
@@ -1865,6 +1913,7 @@ def make_app():
         (r"/", MainHandler),
         (r"/api/login", ApiLoginHandler),
         (r"/api/add_user", ApiAddUserHandler),
+        (r"/api/remove_user", ApiRemoveUserHandler),
         (r"/api/check_auth", ApiCheckAuthHandler),
         (r"/api/workflows", ApiWorkflowsHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),

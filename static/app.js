@@ -77,7 +77,15 @@ class DocFlowApp {
     document.getElementById("loginModalContainer").style.display = "none";
     document.getElementById("mainAppContent").style.display = "block";
     document.getElementById("userPillContainer").style.display = "flex";
-    document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
+    
+    const addMemberNavBtn = document.getElementById("addMemberNavBtn");
+    if (this.currentUser === "Datta") {
+      document.getElementById("loggedInUserLabel").innerText = `Datta (Administrator)`;
+      if (addMemberNavBtn) addMemberNavBtn.style.display = "inline-flex";
+    } else {
+      document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
+      if (addMemberNavBtn) addMemberNavBtn.style.display = "none";
+    }
   }
 
   showLoginModal() {
@@ -91,10 +99,10 @@ class DocFlowApp {
     this.showToast("Logged out safely.");
   }
 
-  // --- ADD AUTHORIZED MEMBER ENGINE ---
+  // --- MEMBER MANAGEMENT ENGINE (DATTA ADMINISTRATOR ONLY) ---
   openAddMemberModal() {
-    if (!this.currentUser) {
-      alert("Only authorized logged-in members can add new members!");
+    if (this.currentUser !== "Datta") {
+      alert("Only Administrator Datta can manage members!");
       return;
     }
     const msgBox = document.getElementById("addMemberMsg");
@@ -111,9 +119,15 @@ class DocFlowApp {
 
   async handleAddMember(event) {
     event.preventDefault();
+    if (this.currentUser !== "Datta") {
+      alert("Only Administrator Datta can add members!");
+      return;
+    }
     const newUsername = document.getElementById("newMemberUsername").value.trim();
     const newPassword = document.getElementById("newMemberPassword").value.trim();
     const msgBox = document.getElementById("addMemberMsg");
+
+    if (!newUsername || !newPassword) return;
 
     msgBox.style.display = "none";
 
@@ -154,6 +168,56 @@ class DocFlowApp {
     }
   }
 
+  async handleRemoveMember(event) {
+    event.preventDefault();
+    if (this.currentUser !== "Datta") {
+      alert("Only Administrator Datta can remove members!");
+      return;
+    }
+    const usernameToRemove = document.getElementById("removeMemberUsername").value.trim();
+    if (!usernameToRemove) return;
+
+    if (!confirm(`Are you sure you want to remove member '${usernameToRemove}'?`)) return;
+
+    const msgBox = document.getElementById("addMemberMsg");
+    msgBox.style.display = "none";
+
+    try {
+      const res = await fetch("/api/remove_user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.authToken}`
+        },
+        body: JSON.stringify({ username: usernameToRemove })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        msgBox.style.display = "block";
+        msgBox.style.background = "rgba(34, 197, 94, 0.15)";
+        msgBox.style.color = "var(--accent-green)";
+        msgBox.style.border = "1px solid var(--accent-green)";
+        msgBox.innerText = data.message;
+        this.showToast(`Member '${usernameToRemove}' removed successfully!`);
+        document.getElementById("removeMemberUsername").value = "";
+        setTimeout(() => this.closeAddMemberModal(), 1800);
+      } else {
+        msgBox.style.display = "block";
+        msgBox.style.background = "rgba(239, 68, 68, 0.15)";
+        msgBox.style.color = "#ef4444";
+        msgBox.style.border = "1px solid #ef4444";
+        msgBox.innerText = data.message || "Failed to remove member.";
+      }
+    } catch (e) {
+      msgBox.style.display = "block";
+      msgBox.style.background = "rgba(239, 68, 68, 0.15)";
+      msgBox.style.color = "#ef4444";
+      msgBox.style.border = "1px solid #ef4444";
+      msgBox.innerText = "Error: " + e.message;
+    }
+  }
+
   // --- WORKFLOW & APP SERVICES ---
   async fetchWorkflows() {
     try {
@@ -183,53 +247,37 @@ class DocFlowApp {
       pTab.style.display = "block";
       sBtn.classList.remove("active");
       pBtn.classList.add("active");
+      this.switchPdfSubTab('sejda');
     }
   }
 
   switchPdfSubTab(subTab) {
-    const mCard = document.getElementById("pdfSubTabMerge");
-    const eCard = document.getElementById("pdfSubTabEdit");
-    const cCard = document.getElementById("pdfSubTabCompress");
+    const sejdaTab = document.getElementById("pdfSubTabSejda");
+    const ilovepdfTab = document.getElementById("pdfSubTabILovePdf");
+    const docflowTab = document.getElementById("pdfSubTabDocFlow");
 
-    const mBtn = document.getElementById("subTabMergeBtn");
-    const eBtn = document.getElementById("subTabEditBtn");
-    const cBtn = document.getElementById("subTabCompressBtn");
+    const sejdaBtn = document.getElementById("subTabSejdaBtn");
+    const ilovepdfBtn = document.getElementById("subTabILovePdfBtn");
+    const docflowBtn = document.getElementById("subTabDocFlowBtn");
 
-    if (!mCard || !eCard || !cCard) return;
+    if (sejdaTab) sejdaTab.style.display = subTab === "sejda" ? "block" : "none";
+    if (ilovepdfTab) ilovepdfTab.style.display = subTab === "ilovepdf" ? "block" : "none";
+    if (docflowTab) docflowTab.style.display = subTab === "docflow" ? "block" : "none";
 
-    if (subTab === "merge") {
-      mCard.style.display = "block";
-      eCard.style.display = "none";
-      cCard.style.display = "none";
-
-      mBtn.className = "btn-primary";
-      mBtn.style.background = "#ef4444";
-      eBtn.className = "btn-back";
-      eBtn.style.background = "";
-      cBtn.className = "btn-back";
-      cBtn.style.background = "";
-    } else if (subTab === "edit") {
-      mCard.style.display = "none";
-      eCard.style.display = "block";
-      cCard.style.display = "none";
-
-      mBtn.className = "btn-back";
-      mBtn.style.background = "";
-      eBtn.className = "btn-primary";
-      eBtn.style.background = "var(--accent-green)";
-      cBtn.className = "btn-back";
-      cBtn.style.background = "";
-    } else if (subTab === "compress") {
-      mCard.style.display = "none";
-      eCard.style.display = "none";
-      cCard.style.display = "block";
-
-      mBtn.className = "btn-back";
-      mBtn.style.background = "";
-      eBtn.className = "btn-back";
-      eBtn.style.background = "";
-      cBtn.className = "btn-primary";
-      cBtn.style.background = "var(--accent-blue)";
+    if (sejdaBtn) {
+      sejdaBtn.className = subTab === "sejda" ? "btn-primary" : "btn-back";
+      if (subTab === "sejda") sejdaBtn.style.background = "var(--accent-green)";
+      else sejdaBtn.style.background = "";
+    }
+    if (ilovepdfBtn) {
+      ilovepdfBtn.className = subTab === "ilovepdf" ? "btn-primary" : "btn-back";
+      if (subTab === "ilovepdf") ilovepdfBtn.style.background = "#ef4444";
+      else ilovepdfBtn.style.background = "";
+    }
+    if (docflowBtn) {
+      docflowBtn.className = subTab === "docflow" ? "btn-primary" : "btn-back";
+      if (subTab === "docflow") docflowBtn.style.background = "var(--accent-blue)";
+      else docflowBtn.style.background = "";
     }
   }
 
