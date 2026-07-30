@@ -1,9 +1,14 @@
+import os
+import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-cred = credentials.Certificate(
-    "doc-flow-d161b-firebase-adminsdk-fbsvc-7f68650a69.json"
+firebase_credentials = json.loads(
+    os.environ["FIREBASE_CREDENTIALS"]
 )
+
+cred = credentials.Certificate(firebase_credentials)
+
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
