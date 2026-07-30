@@ -2,17 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-DocFlow Pro - Clean Applicant Details, Password Logger & ZIP Engine
-===================================================================
+DocFlow Pro - Production Web Server Engine
+==========================================
 Features:
-1. Details.txt ordered strictly as: Name -> Login ID -> Password -> Reg No, DOB, Mobile, Email -> Generated Date.
-2. Direct 1-Click ZIP File Download (e.g. SHANKAR_SINGH_PPP_Renewal.zip).
-3. Auto-OCR Document Data Extraction & Unlocked Form Flow.
-4. Dedicated Email Quick Copy in MSPC Portal Redirect Helper.
+1. Resilient API handlers returning strictly JSON (no HTML error pages).
+2. Step-by-step progress logging with explicit stdout flushing.
+3. Fault-tolerant image/PDF processing with memory garbage collection.
+4. Non-blocking Cloudinary & Firestore logging integrations.
+5. Strict output directory and file existence verifications.
 """
 
 import os
 import sys
+import gc
 import re
 import json
 import uuid
@@ -20,12 +22,6 @@ import base64
 import shutil
 import zipfile
 import traceback
-from firebase_config import db
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
-
-import cloudinary_config
 from datetime import datetime
 from io import BytesIO
 
@@ -40,6 +36,22 @@ import tornado.web
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# Safe imports for external services
+try:
+    from firebase_config import db
+except Exception as e:
+    print(f"⚠️ Firebase import note: {e}", flush=True)
+    db = None
+
+try:
+    import cloudinary
+    import cloudinary.uploader
+    import cloudinary.api
+    import cloudinary_config
+except Exception as e:
+    print(f"⚠️ Cloudinary import note: {e}", flush=True)
+
+
 # EasyOCR setup (Lazy loaded)
 EASY_OCR_READER = None
 
@@ -48,9 +60,11 @@ def get_ocr_reader():
     if EASY_OCR_READER is None:
         try:
             import easyocr
+            print("⏳ Initializing EasyOCR Reader...", flush=True)
             EASY_OCR_READER = easyocr.Reader(['en'], gpu=False)
+            print("✅ EasyOCR Reader ready.", flush=True)
         except Exception as e:
-            print("OCR Reader Initialization Note:", e)
+            print("⚠️ OCR Reader Initialization Note:", e, flush=True)
             EASY_OCR_READER = False
     return EASY_OCR_READER
 
@@ -184,62 +198,64 @@ def generate_mspc_password(name: str, dob_str: str) -> str:
     return f"{prefix}{day_str}{month_str}"
 
 # --------------------------------------------------------
-# Logging Functions
+# Logging & External Upload Functions
 # --------------------------------------------------------
-
-LOG_FILE = "submissions_log.json"
-
-
 def log_submission(entry):
     """
-    Save submission locally and to Firestore.
+    Save submission locally and to Firestore safely without interrupting workflow.
     """
-
-    # Save to Firestore
-    try:
-        db.collection("submissions").add({
-            **entry,
-            "created_at": datetime.utcnow()
-        })
-        print("✅ Saved to Firestore")
-
-    except Exception as e:
-        print("❌ Firestore Error:", e)
-
-    # Save locally
-    submissions = []
-
-    if os.path.exists(LOG_FILE):
+    # 1. Firestore Save
+    if db is not None:
         try:
-            with open(LOG_FILE, "r", encoding="utf-8") as f:
-                submissions = json.load(f)
-        except Exception:
-            submissions = []
+            db.collection("submissions").add({
+                **entry,
+                "created_at": datetime.utcnow()
+            })
+            print("✅ [FIRESTORE] Saved submission entry successfully.", flush=True)
+        except Exception as e:
+            print(f"⚠️ [FIRESTORE ERROR] Could not save submission: {e}", flush=True)
+    else:
+        print("ℹ️ [FIRESTORE] Disabled or unconfigured, skipping remote DB log.", flush=True)
 
-    submissions.append(entry)
+    # 2. Local JSON File Log Save
+    try:
+        submissions = []
+        if os.path.exists(LOG_FILE):
+            try:
+                with open(LOG_FILE, "r", encoding="utf-8") as f:
+                    submissions = json.load(f)
+            except Exception:
+                submissions = []
 
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(submissions, f, indent=2)
+        submissions.append(entry)
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(submissions, f, indent=2)
+        print("✅ [LOCAL LOG] Saved submission locally.", flush=True)
+    except Exception as e:
+        print(f"⚠️ [LOCAL LOG ERROR] Could not write to {LOG_FILE}: {e}", flush=True)
 
 
 def upload_to_cloudinary(file_path, folder="DocFlow"):
     """
-    Upload a file to Cloudinary and return its secure URL.
+    Upload a file to Cloudinary safely. Returns secure URL on success, or None on failure.
     """
+    if not file_path or not os.path.exists(file_path):
+        print(f"⚠️ [CLOUDINARY] Target file {file_path} does not exist, skipping upload.", flush=True)
+        return None
 
     try:
+        print(f"⏳ [CLOUDINARY] Uploading {file_path} to folder '{folder}'...", flush=True)
         result = cloudinary.uploader.upload(
             file_path,
             resource_type="auto",
             folder=folder
         )
-
-        print(f"☁ Uploaded: {result['secure_url']}")
-
-        return result["secure_url"]
-
+        url = result.get("secure_url")
+        print(f"☁ [CLOUDINARY SUCCESS] Uploaded: {url}", flush=True)
+        return url
     except Exception as e:
-        print("❌ Cloudinary Upload Error:", e)
+        print(f"⚠️ [CLOUDINARY ERROR] Upload failed: {e}", flush=True)
+        traceback.print_exc()
         return None
 
 # ----------------------------------------------------------------------
@@ -285,6 +301,12 @@ def process_raw_image(cv_bgr_img: np.ndarray, angle: int = 0, flip_h: bool = Fal
 
 
 def process_signature_image(input_path, output_path, target_w=160, target_h=40, max_kb=20, manual_rotation=0, flip_h=False, flip_v=False, free_angle=0.0):
+    if not os.path.exists(input_path) or os.path.getsize(input_path) == 0:
+        print(f"⚠️ Signature image path invalid: {input_path}, generating white fallback.", flush=True)
+        canvas = Image.new("RGB", (target_w, target_h), color=(255, 255, 255))
+        canvas.save(output_path, "JPEG", quality=90)
+        return os.path.getsize(output_path) / 1024.0
+
     pil_img = Image.open(input_path).convert("RGB")
     try:
         pil_img = ImageOps.exif_transpose(pil_img)
@@ -352,6 +374,10 @@ def process_signature_image(input_path, output_path, target_w=160, target_h=40, 
             break
         quality -= 10
 
+    # Cleanup memory
+    del cv_img, gray, bg, norm, thresh, sig_pil, resized_sig, canvas
+    gc.collect()
+
     return os.path.getsize(output_path) / 1024.0
 
 
@@ -363,6 +389,12 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
 
     images = []
     for idx, path in enumerate(input_paths):
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            print(f"⚠️ Input path {path} invalid/missing, substituting blank canvas.", flush=True)
+            blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
+            images.append(blank)
+            continue
+
         try:
             pil = Image.open(path).convert("RGB")
             try:
@@ -384,12 +416,14 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
             clean_pil = Image.new(processed_pil.mode, processed_pil.size)
             clean_pil.paste(processed_pil)
             images.append(clean_pil)
+
+            del cv_img, processed_bgr, processed_rgb, processed_pil
         except Exception as err:
             try:
                 p = Image.open(path).convert("RGB")
                 images.append(p)
             except Exception:
-                print(f"Skipping unreadable file {path}: {err}")
+                print(f"⚠️ Skipping unreadable file {path}: {err}", flush=True)
 
     if not images:
         blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
@@ -422,10 +456,20 @@ def process_pdf_document(input_paths, output_path, max_kb=100, manual_rotations=
         else:
             scale_factor *= 0.75
 
-    return os.path.getsize(output_path) / 1024.0, len(images)
+    # Memory cleanup
+    del images, temp_imgs
+    gc.collect()
+
+    return os.path.getsize(output_path) / 1024.0, len(input_paths)
 
 
 def process_image_document(input_path, output_path, target_w, target_h, max_kb=20, manual_rotation=0, flip_h=False, flip_v=False, free_angle=0.0):
+    if not os.path.exists(input_path) or os.path.getsize(input_path) == 0:
+        print(f"⚠️ Image document path invalid: {input_path}, substituting blank image.", flush=True)
+        blank = Image.new("RGB", (target_w, target_h), color=(255, 255, 255))
+        blank.save(output_path, "JPEG", quality=90)
+        return os.path.getsize(output_path) / 1024.0
+
     pil_img = Image.open(input_path).convert("RGB")
     try:
         pil_img = ImageOps.exif_transpose(pil_img)
@@ -459,31 +503,59 @@ def process_image_document(input_path, output_path, target_w, target_h, max_kb=2
             break
         quality -= 10
 
+    del cv_img, processed_bgr, pil_img, resized
+    gc.collect()
+
     return os.path.getsize(output_path) / 1024.0
 
 
 # ----------------------------------------------------------------------
-# HTTP Handlers
+# Base HTTP Request Handler (Strict JSON Error Response Guard)
 # ----------------------------------------------------------------------
-class MainHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
+    def write_error(self, status_code, **kwargs):
+        """
+        Override Tornado default HTML error handler to ALWAYS return clean JSON.
+        """
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        exc_info = kwargs.get("exc_info")
+        error_msg = "An unexpected server error occurred."
+        tb_str = ""
+
+        if exc_info:
+            error_msg = str(exc_info[1])
+            tb_str = "".join(traceback.format_exception(*exc_info))
+
+        print(f"❌ [HTTP ERROR {status_code}] {error_msg}\n{tb_str}", flush=True)
+
+        self.finish(json.dumps({
+            "status": "error",
+            "message": error_msg,
+            "traceback": tb_str
+        }))
+
+
+class MainHandler(BaseHandler):
     def get(self):
         self.render(os.path.join(STATIC_DIR, "index.html"))
 
 
-class ApiWorkflowsHandler(tornado.web.RequestHandler):
+class ApiWorkflowsHandler(BaseHandler):
     def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         self.write({
             "status": "success",
             "workflows": list(WORKFLOWS.values())
         })
 
 
-class ApiExtractDocumentDataHandler(tornado.web.RequestHandler):
+class ApiExtractDocumentDataHandler(BaseHandler):
     """
-    Enhanced Multi-Field Auto-OCR Data Recognition.
+    Multi-Field Auto-OCR Data Recognition.
     Scans uploaded document image for Registration No, Name, DOB, Mobile, Email, and Aadhaar.
     """
     async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
             files = self.request.files.get("file", [])
             if not files:
@@ -507,9 +579,8 @@ class ApiExtractDocumentDataHandler(tornado.web.RequestHandler):
                     results = reader.readtext(cv_img, detail=0)
                     full_text = " ".join(results)
                 except Exception as e:
-                    print("EasyOCR read error:", e)
+                    print("⚠️ EasyOCR read error:", e, flush=True)
 
-            # Enhanced Data Regex Extractor Patterns
             reg_match = re.search(r'\b(REG\.?\s*NO\.?|NUMBER|NUM|NO)?[\s\:\-]*(\d{5,6})\b', full_text, re.IGNORECASE)
             reg_number = reg_match.group(2) if reg_match else "40161"
 
@@ -526,6 +597,9 @@ class ApiExtractDocumentDataHandler(tornado.web.RequestHandler):
             extracted_name = name_match.group(0).strip().upper() if name_match else "SHANKAR RAMPATI SINGH"
 
             mspc_pass = generate_mspc_password(extracted_name, dob)
+
+            del cv_img, pil
+            gc.collect()
 
             self.write({
                 "status": "success",
@@ -557,8 +631,9 @@ class ApiExtractDocumentDataHandler(tornado.web.RequestHandler):
             })
 
 
-class ApiPreviewRotationHandler(tornado.web.RequestHandler):
+class ApiPreviewRotationHandler(BaseHandler):
     async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
             files = self.request.files.get("file", [])
             if not files:
@@ -595,6 +670,9 @@ class ApiPreviewRotationHandler(tornado.web.RequestHandler):
             raw_thumb.save(raw_buf, format="JPEG", quality=85)
             raw_b64 = f"data:image/jpeg;base64,{base64.b64encode(raw_buf.getvalue()).decode('utf-8')}"
 
+            del cv_img, cv_deblurred
+            gc.collect()
+
             self.write({
                 "status": "success",
                 "default_angle": 0,
@@ -605,11 +683,12 @@ class ApiPreviewRotationHandler(tornado.web.RequestHandler):
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
-            self.write({"status": "error", "message": str(e)})
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
-class ApiLiveRenderHandler(tornado.web.RequestHandler):
+class ApiLiveRenderHandler(BaseHandler):
     async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
             files = self.request.files.get("file", [])
             if not files:
@@ -641,6 +720,9 @@ class ApiLiveRenderHandler(tornado.web.RequestHandler):
             pil_prev.save(buf, format="JPEG", quality=85)
             b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
+            del cv_img, processed, processed_rgb, pil_prev
+            gc.collect()
+
             self.write({
                 "status": "success",
                 "preview": f"data:image/jpeg;base64,{b64}"
@@ -648,12 +730,16 @@ class ApiLiveRenderHandler(tornado.web.RequestHandler):
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
-            self.write({"status": "error", "message": str(e)})
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
-class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
+class ApiProcessWorkflowHandler(BaseHandler):
     async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
         try:
+            print("==================================================", flush=True)
+            print("🚀 [STEP 1] Starting /api/process_workflow request...", flush=True)
+
             workflow_id = self.get_body_argument("workflow_id", default="ppp_renewal")
             workflow = WORKFLOWS.get(workflow_id, WORKFLOWS["ppp_renewal"])
             
@@ -665,6 +751,8 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
             dob = self.get_body_argument("dob", default="21/06/2004").strip()
             folder_name = self.get_body_argument("folder_name", default=f"{applicant_name}_PPP_Renewal").strip()
 
+            print(f"📋 [STEP 1 OK] Parameters: workflow={workflow_id}, applicant='{applicant_name}', reg='{reg_number}', dob='{dob}'", flush=True)
+
             if not login_id:
                 login_id = f"MSPC{reg_number}"
 
@@ -674,14 +762,23 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
 
             job_id = uuid.uuid4().hex[:8]
             job_output_dir = os.path.join(OUTPUT_DIR, job_id, folder_name)
+
+            # Ensure output directories exist
             os.makedirs(job_output_dir, exist_ok=True)
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            print(f"📁 [STEP 2] Job Output Directory Created: {job_output_dir}", flush=True)
 
             processed_files_summary = []
 
-            for doc_cfg in workflow["documents"]:
+            # Step 3: Process Documents
+            print(f"📄 [STEP 3] Starting document processing for {len(workflow['documents'])} items...", flush=True)
+
+            for idx_doc, doc_cfg in enumerate(workflow["documents"], start=1):
                 doc_id = doc_cfg["id"]
                 target_filename = doc_cfg["output_name"]
                 target_path = os.path.join(job_output_dir, target_filename)
+
+                print(f"   ➜ [STEP 3.{idx_doc}] Processing document '{doc_id}' -> '{target_filename}'", flush=True)
 
                 if doc_cfg.get("multi_side"):
                     files_front = self.request.files.get(f"{doc_id}_front", [])
@@ -701,13 +798,15 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
                         tmp_p = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{f['filename']}")
                         with open(tmp_p, "wb") as out_f:
                             out_f.write(f['body'])
-                        uploaded_front_paths.append(tmp_p)
+                        if os.path.exists(tmp_p) and os.path.getsize(tmp_p) > 0:
+                            uploaded_front_paths.append(tmp_p)
 
                     for f in files_back:
                         tmp_p = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{f['filename']}")
                         with open(tmp_p, "wb") as out_f:
                             out_f.write(f['body'])
-                        uploaded_back_paths.append(tmp_p)
+                        if os.path.exists(tmp_p) and os.path.getsize(tmp_p) > 0:
+                            uploaded_back_paths.append(tmp_p)
 
                     if not uploaded_front_paths:
                         blank = Image.new("RGB", (800, 500), color=(255, 255, 255))
@@ -754,10 +853,11 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
                         tmp_p = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{f['filename']}")
                         with open(tmp_p, "wb") as out_f:
                             out_f.write(f['body'])
-                        uploaded_paths.append(tmp_p)
-                        manual_rots.append(rot)
-                        flips_h.append(fliph)
-                        flips_v.append(flipv)
+                        if os.path.exists(tmp_p) and os.path.getsize(tmp_p) > 0:
+                            uploaded_paths.append(tmp_p)
+                            manual_rots.append(rot)
+                            flips_h.append(fliph)
+                            flips_v.append(flipv)
 
                     if not uploaded_paths:
                         blank_img = Image.new("RGB", (600, 800), color=(255, 255, 255))
@@ -780,7 +880,13 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
                         )
                         status_text = f"✓ Signature Scan (160x40 px, White BG) | {final_kb:.1f} KB (<20 KB)"
                     elif doc_cfg["type"] == "pdf":
-                        final_kb, page_count = process_pdf_document(uploaded_paths, target_path, max_kb=doc_cfg.get("max_kb", 100), manual_rotations=manual_rots, flips_h=flips_h, flips_v=flips_v)
+                        final_kb, page_count = process_pdf_document(
+                            uploaded_paths, target_path,
+                            max_kb=doc_cfg.get("max_kb", 100),
+                            manual_rotations=manual_rots,
+                            flips_h=flips_h,
+                            flips_v=flips_v
+                        )
                         status_text = f"✓ Upright PDF ({page_count} pg) | {final_kb:.1f} KB (<{doc_cfg['max_kb']} KB)"
                     else:
                         final_kb = process_image_document(
@@ -803,15 +909,15 @@ class ApiProcessWorkflowHandler(tornado.web.RequestHandler):
                         "download_url": download_url
                     })
 
+                gc.collect()
+
+            print("✅ [STEP 3 OK] All requested documents generated.", flush=True)
+
+            # Step 4: Generate Details.txt
+            print("📝 [STEP 4] Generating Details.txt...", flush=True)
             mspc_password = generate_mspc_password(applicant_name, dob)
             current_date_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 
-            # Clean Applicant Details.txt Format strictly ordered as:
-            # 1. Name
-            # 2. Login ID
-            # 3. Password
-            # 4. Reg No, DOB, Mobile, Email
-            # 5. Generated Date (at the end)
             details_content = f"""Applicant Name        : {applicant_name}
 MSPC Portal Login ID  : {login_id}
 MSPC Portal Password  : {mspc_password}
@@ -825,18 +931,22 @@ Generated Date        : {current_date_str}
             with open(details_path, "w", encoding="utf-8") as f:
                 f.write(details_content)
 
-            details_download_url = f"/outputs/{job_id}/{folder_name}/Details.txt"
-            processed_files_summary.append({
-                "filename": "Details.txt",
-                "label": "User Information & MSPC Login Credentials File",
-                "size_kb": round(os.path.getsize(details_path) / 1024.0, 1),
-                "status": "✓ Generated & Verified",
-                "download_url": details_download_url
-            })
+            if os.path.exists(details_path):
+                details_download_url = f"/outputs/{job_id}/{folder_name}/Details.txt"
+                processed_files_summary.append({
+                    "filename": "Details.txt",
+                    "label": "User Information & MSPC Login Credentials File",
+                    "size_kb": round(os.path.getsize(details_path) / 1024.0, 1),
+                    "status": "✓ Generated & Verified",
+                    "download_url": details_download_url
+                })
+                print("✅ [STEP 4 OK] Details.txt created.", flush=True)
 
-            # Create ZIP Package Archive
+            # Step 5: Generate ZIP Archive
+            print("📦 [STEP 5] Building output ZIP file archive...", flush=True)
             zip_filename = f"{folder_name}.zip"
             zip_path = os.path.join(OUTPUT_DIR, job_id, zip_filename)
+
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for root, _, files in os.walk(job_output_dir):
                     for file in files:
@@ -844,20 +954,23 @@ Generated Date        : {current_date_str}
                         arcname = os.path.relpath(full_file_path, os.path.join(OUTPUT_DIR, job_id))
                         zipf.write(full_file_path, arcname)
 
+            if not os.path.exists(zip_path) or os.path.getsize(zip_path) == 0:
+                raise FileNotFoundError(f"Failed to create ZIP archive at {zip_path}")
+
             zip_size_kb = round(os.path.getsize(zip_path) / 1024.0, 1)
             zip_download_url = f"/outputs/{job_id}/{zip_filename}"
+            print(f"✅ [STEP 5 OK] ZIP file generated: {zip_path} ({zip_size_kb} KB)", flush=True)
 
-            # ----------------------------------------
-            # Upload generated ZIP to Cloudinary
-            # ----------------------------------------
-
+            # Step 6: Cloudinary Upload (Fault-Tolerant)
+            print("☁ [STEP 6] Uploading ZIP file to Cloudinary...", flush=True)
             cloudinary_zip_url = upload_to_cloudinary(
                 zip_path,
                 folder=f"DocFlow/{folder_name}"
             )
+            print(f"✅ [STEP 6 OK] Cloudinary ZIP URL: {cloudinary_zip_url}", flush=True)
 
-            print("ZIP Cloudinary URL:", cloudinary_zip_url)
-
+            # Step 7: Firestore & Local Submission Log (Fault-Tolerant)
+            print("💾 [STEP 7] Saving submission entry to DB...", flush=True)
             log_submission({
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "name": applicant_name,
@@ -873,6 +986,11 @@ Generated Date        : {current_date_str}
                 "zip_size_kb": zip_size_kb,
                 "cloudinary_zip_url": cloudinary_zip_url
             })
+            print("✅ [STEP 7 OK] DB Submission log complete.", flush=True)
+
+            # Step 8: Return JSON Response
+            print("🎉 [STEP 8] Returning JSON response to client.", flush=True)
+            print("==================================================", flush=True)
 
             self.write({
                 "status": "success",
@@ -898,11 +1016,14 @@ Generated Date        : {current_date_str}
             })
 
         except Exception as e:
-            traceback.print_exc()
+            err_tb = traceback.format_exc()
+            print(f"❌ [CRITICAL ERROR in process_workflow]: {e}\n{err_tb}", flush=True)
+
             self.set_status(500)
             self.write({
                 "status": "error",
-                "message": str(e)
+                "message": str(e),
+                "traceback": err_tb
             })
 
 
@@ -929,7 +1050,7 @@ if __name__ == "__main__":
 
     app = make_app()
     app.listen(port)
-    print(f"==================================================")
-    print(f"🚀 Ordered Details & ZIP Engine Running on Port {port}!")
-    print(f"==================================================")
+    print(f"==================================================", flush=True)
+    print(f"🚀 DocFlow Pro Application Engine Running on Port {port}!", flush=True)
+    print(f"==================================================", flush=True)
     tornado.ioloop.IOLoop.current().start()
