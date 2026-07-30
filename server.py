@@ -532,6 +532,21 @@ def process_signature_image(input_path, output_path, target_w=160, target_h=40, 
     return os.path.getsize(output_path) / 1024.0
 
 
+def sharpen_document_image(pil_img):
+    """
+    Applies unsharp mask text sharpening to keep document text, stamps, and signatures crystal clear.
+    """
+    try:
+        img_np = np.array(pil_img)
+        bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        gaussian = cv2.GaussianBlur(bgr, (0, 0), 2.0)
+        sharpened_bgr = cv2.addWeighted(bgr, 1.4, gaussian, -0.4, 0)
+        rgb = cv2.cvtColor(sharpened_bgr, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(rgb)
+    except Exception:
+        return pil_img
+
+
 def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=None, flips_h=None, flips_v=None, free_angles=None):
     if manual_rotations is None: manual_rotations = []
     if flips_h is None: flips_h = []
@@ -544,7 +559,7 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
         blank.save(output_path, "PDF")
         return os.path.getsize(output_path) / 1024.0, 1
 
-    # 1. Direct PyMuPDF PDF Merge if all inputs are existing PDF files and no rotation/flips needed
+    # 1. Direct PyMuPDF Native Stream Merge & Compression (100% Vector/Text Original Quality)
     all_pdfs = all(p.lower().endswith('.pdf') for p in valid_paths)
     no_transforms = not any(manual_rotations) and not any(flips_h) and not any(flips_v) and not any(free_angles)
 
@@ -558,7 +573,7 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
                 total_pgs += len(d)
                 d.close()
             
-            merged_doc.save(output_path, garbage=4, deflate=True)
+            merged_doc.save(output_path, garbage=4, deflate=True, clean=True)
             merged_doc.close()
 
             size_kb = os.path.getsize(output_path) / 1024.0
@@ -569,17 +584,18 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
         except Exception as e:
             print(f"⚠️ Direct PDF merge warning: {e}", flush=True)
 
-    # 2. High-DPI Image Conversion Fallback if size > max_kb or transforms applied
+    # 2. HD 300-DPI Page Extraction with Edge Sharpening Fallback
     images = []
     for idx, path in enumerate(valid_paths):
         try:
             if path.lower().endswith('.pdf'):
                 doc = fitz.open(path)
                 for page in doc:
-                    # 250 DPI for crystal-clear text rendering
-                    pix = page.get_pixmap(dpi=250)
+                    # 300 DPI for crystal-clear text & signature rendering
+                    pix = page.get_pixmap(dpi=300)
                     pil_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    images.append(pil_img)
+                    sharp_img = sharpen_document_image(pil_img)
+                    images.append(sharp_img)
                 doc.close()
             else:
                 pil = Image.open(path).convert("RGB")
@@ -601,7 +617,8 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
 
                 clean_pil = Image.new(processed_pil.mode, processed_pil.size)
                 clean_pil.paste(processed_pil)
-                images.append(clean_pil)
+                sharp_img = sharpen_document_image(clean_pil)
+                images.append(sharp_img)
 
                 del cv_img, processed_bgr, processed_rgb, processed_pil
         except Exception as err:
@@ -611,7 +628,7 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
         blank = Image.new("RGB", (600, 800), color=(255, 255, 255))
         images = [blank]
 
-    quality = 90
+    quality = 92
     scale_factor = 1.0
 
     while True:
@@ -625,18 +642,18 @@ def process_pdf_document(input_paths, output_path, max_kb=125, manual_rotations=
             output_path, "PDF",
             save_all=True,
             append_images=temp_imgs[1:],
-            resolution=150.0,
+            resolution=300.0, # High 300 DPI Output!
             quality=quality
         )
 
         size_kb = os.path.getsize(output_path) / 1024.0
-        if size_kb <= max_kb or (quality <= 25 and scale_factor <= 0.4):
+        if size_kb <= max_kb or (quality <= 30 and scale_factor <= 0.45):
             break
 
-        if quality > 35:
+        if quality > 45:
             quality -= 10
         else:
-            scale_factor *= 0.85
+            scale_factor *= 0.88
 
     del images, temp_imgs
     gc.collect()
