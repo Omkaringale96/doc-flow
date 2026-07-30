@@ -277,28 +277,28 @@ WORKFLOWS = {
                 "icon": "fa-building",
                 "documents": [
                     {
-                        "id": "light_bill_tax_receipt",
-                        "label": "Light Bill + Tax Receipt",
+                        "id": "light_bill_cold_storage",
+                        "label": "Light Bill + Cold Storage Certificate",
                         "type": "pdf",
                         "multi_sources": [
                             {"id": "light_bill", "label": "Light Bill", "hint": "Upload Light Bill (Image or PDF)"},
-                            {"id": "tax_receipt", "label": "Tax Receipt", "hint": "Upload Tax Receipt (Image or PDF)"}
+                            {"id": "cold_storage", "label": "Cold Storage Certificate", "hint": "Upload Cold Storage Certificate (Image or PDF)"}
                         ],
-                        "output_name": "Light_Bill_Tax_Receipt.pdf",
+                        "output_name": "Light_Bill_Cold_Storage.pdf",
                         "max_kb": 125,
-                        "hint": "Upload Light Bill & Tax Receipt. Combined PDF under 125 KB"
+                        "hint": "Upload Light Bill & Cold Storage Certificate. Combined PDF under 125 KB"
                     },
                     {
-                        "id": "cold_storage_namuna8",
-                        "label": "Cold Storage + Namuna 8",
+                        "id": "tax_receipt_namuna8",
+                        "label": "Tax Receipt + Namuna 8",
                         "type": "pdf",
                         "multi_sources": [
-                            {"id": "cold_storage", "label": "Cold Storage Certificate", "hint": "Upload Cold Storage Certificate (Image or PDF)"},
+                            {"id": "tax_receipt", "label": "Tax Receipt", "hint": "Upload Tax Receipt (Image or PDF)"},
                             {"id": "namuna_8", "label": "Namuna 8", "hint": "Upload Namuna 8 (Image or PDF)"}
                         ],
-                        "output_name": "Cold_Storage_Namuna8.pdf",
+                        "output_name": "Tax_Receipt_Namuna8.pdf",
                         "max_kb": 125,
-                        "hint": "Upload Cold Storage Certificate & Namuna 8. Combined PDF under 125 KB"
+                        "hint": "Upload Tax Receipt & Namuna 8. Combined PDF under 125 KB"
                     },
                     {
                         "id": "rent_agreement",
