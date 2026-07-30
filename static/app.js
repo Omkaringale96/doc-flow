@@ -19,13 +19,32 @@ class DocFlowApp {
   }
 
   async init() {
-    this.checkAuthStatus();
-    await this.fetchWorkflows();
-    this.renderServices();
+    await this.checkAuthStatus();
   }
 
   // --- MEMBER AUTHENTICATION ENGINE ---
-  checkAuthStatus() {
+  async checkAuthStatus() {
+    const token = localStorage.getItem("docflow_token");
+    const username = localStorage.getItem("docflow_username");
+
+    if (token && username) {
+      try {
+        const res = await fetch("/api/check_auth", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.status === "success" && data.authenticated) {
+          this.authToken = token;
+          this.currentUser = username;
+          await this.fetchWorkflows();
+          this.renderServices();
+          this.showAuthenticatedApp();
+          return;
+        }
+      } catch (e) {
+        console.error("Auth check failed:", e);
+      }
+    }
     this.logoutSilently();
   }
 
@@ -61,6 +80,8 @@ class DocFlowApp {
         localStorage.setItem("docflow_token", data.token);
         localStorage.setItem("docflow_username", data.username);
 
+        await this.fetchWorkflows();
+        this.renderServices();
         this.showAuthenticatedApp();
         this.showToast(`Welcome back, Officer ${data.username}! Access Granted.`);
       } else {
@@ -221,7 +242,11 @@ class DocFlowApp {
   // --- WORKFLOW & APP SERVICES ---
   async fetchWorkflows() {
     try {
-      const res = await fetch("/api/workflows");
+      const headers = {};
+      if (this.authToken) {
+        headers["Authorization"] = `Bearer ${this.authToken}`;
+      }
+      const res = await fetch("/api/workflows", { headers });
       const data = await res.json();
       if (data.status === "success") {
         this.workflows = data.workflows;
