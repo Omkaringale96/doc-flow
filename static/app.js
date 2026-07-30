@@ -233,24 +233,17 @@ class DocFlowApp {
 
   switchTab(tab) {
     const sTab = document.getElementById("servicesTab");
-    const aTab = document.getElementById("apptAccTab");
     const pTab = document.getElementById("pdfEditorTab");
 
     const sBtn = document.getElementById("navServicesBtn");
-    const aBtn = document.getElementById("navApptAccBtn");
     const pBtn = document.getElementById("navPdfEditorBtn");
 
     if (sTab) sTab.style.display = tab === "services" ? "block" : "none";
-    if (aTab) aTab.style.display = tab === "appt_acc" ? "block" : "none";
     if (pTab) pTab.style.display = tab === "pdf_editor" ? "block" : "none";
 
     if (sBtn) {
       if (tab === "services") sBtn.classList.add("active");
       else sBtn.classList.remove("active");
-    }
-    if (aBtn) {
-      if (tab === "appt_acc") aBtn.classList.add("active");
-      else aBtn.classList.remove("active");
     }
     if (pBtn) {
       if (tab === "pdf_editor") pBtn.classList.add("active");
