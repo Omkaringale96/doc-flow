@@ -31,7 +31,6 @@ scratch/
 submissions_log.json
 .env
 # Firebase
-firebase_config.py
 *-firebase-adminsdk*.json
 
 # Python
