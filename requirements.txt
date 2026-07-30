@@ -10,3 +10,5 @@ requests
 urllib3
 pypdf
 PyMuPDF
+cloudinary
+firebase-admin

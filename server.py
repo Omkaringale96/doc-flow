@@ -396,6 +396,13 @@ def upload_to_cloudinary(file_path, folder="DocFlow"):
         return None
 
     try:
+        import cloudinary
+        import cloudinary.uploader
+    except Exception as err:
+        print(f"ℹ️ [CLOUDINARY NOTE] Cloudinary module not imported: {err}", flush=True)
+        return None
+
+    try:
         config = cloudinary.config()
         if not getattr(config, "api_key", None) or not getattr(config, "cloud_name", None):
             print("ℹ️ [CLOUDINARY] Credentials not configured. Skipping Cloudinary upload.", flush=True)
