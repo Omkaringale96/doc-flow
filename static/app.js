@@ -1607,6 +1607,52 @@ class DocFlowApp {
       alert("PDF Export Exception: " + e.message);
     }
   }
+
+  handleMergeFilesSelected(files) {
+    if (!files || files.length === 0) return;
+    this.selectedMergeFiles = Array.from(files);
+    const listEl = document.getElementById("mergeFilesSelectedList");
+    if (listEl) {
+      listEl.innerHTML = `✓ ${files.length} file(s) selected: ` + this.selectedMergeFiles.map(f => f.name).join(", ");
+    }
+  }
+
+  async executeMergePdfs() {
+    if (!this.selectedMergeFiles || this.selectedMergeFiles.length === 0) {
+      alert("Please select PDF/image files to merge first!");
+      return;
+    }
+
+    const maxKb = document.getElementById("mergeTargetKb").value || "125";
+    const formData = new FormData();
+    this.selectedMergeFiles.forEach((file, idx) => {
+      formData.append(`file_${idx}`, file);
+    });
+    formData.append("output_name", "Merged_Document.pdf");
+    formData.append("max_kb", maxKb);
+
+    this.showToast(`Merging ${this.selectedMergeFiles.length} file(s) and compressing under ${maxKb} KB...`);
+
+    try {
+      const res = await fetch("/api/merge_pdfs", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const link = document.createElement("a");
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        this.showToast(`PDFs merged & compressed (${data.file_size_kb} KB)! Download started.`);
+      } else {
+        alert("Merge Error: " + data.message);
+      }
+    } catch (e) {
+      alert("Merge Exception: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

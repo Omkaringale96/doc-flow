@@ -1474,6 +1474,87 @@ class ApiEditPdfStandaloneHandler(BaseHandler):
             self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
 
 
+class ApiMergePdfsHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            uploaded_files = []
+            for key in self.request.files:
+                uploaded_files.extend(self.request.files[key])
+
+            if not uploaded_files:
+                self.set_status(400)
+                self.write({"status": "error", "message": "No files uploaded to merge"})
+                return
+
+            target_filename = self.get_body_argument("output_name", default="Merged_Document.pdf").strip()
+            if not target_filename.lower().endswith(".pdf"):
+                target_filename += ".pdf"
+
+            max_kb = float(self.get_body_argument("max_kb", default="125"))
+
+            job_id = uuid.uuid4().hex[:8]
+            job_output_dir = os.path.join(OUTPUT_DIR, job_id)
+            os.makedirs(job_output_dir, exist_ok=True)
+
+            temp_paths = []
+            for i, f in enumerate(uploaded_files):
+                tmp_p = os.path.join(UPLOAD_DIR, f"merge_{job_id}_{i}_{f['filename']}")
+                with open(tmp_p, "wb") as f_out:
+                    f_out.write(f['body'])
+                temp_paths.append(tmp_p)
+
+            merged_temp_path = os.path.join(job_output_dir, f"raw_{target_filename}")
+            writer = pypdf.PdfWriter()
+
+            for p in temp_paths:
+                ext = os.path.splitext(p)[1].lower()
+                if ext in ['.jpg', '.jpeg', '.png', '.bmp']:
+                    pil_img = Image.open(p).convert("RGB")
+                    img_pdf_bytes = BytesIO()
+                    pil_img.save(img_pdf_bytes, "PDF")
+                    img_pdf_bytes.seek(0)
+                    img_reader = pypdf.PdfReader(img_pdf_bytes)
+                    for pg in img_reader.pages:
+                        writer.add_page(pg)
+                else:
+                    reader = pypdf.PdfReader(p)
+                    for pg in reader.pages:
+                        writer.add_page(pg)
+
+            with open(merged_temp_path, "wb") as f_merged:
+                writer.write(f_merged)
+
+            final_out_path = os.path.join(job_output_dir, target_filename)
+
+            process_pdf_document([merged_temp_path], final_out_path, max_kb=max_kb)
+
+            for p in temp_paths:
+                if os.path.exists(p):
+                    os.remove(p)
+            if os.path.exists(merged_temp_path):
+                os.remove(merged_temp_path)
+
+            size_kb = os.path.getsize(final_out_path) / 1024.0
+            print(f"✅ PDFs merged & compressed: {final_out_path} ({size_kb:.1f} KB / Target: {max_kb} KB)", flush=True)
+
+            gc.collect()
+
+            self.write({
+                "status": "success",
+                "message": "PDF files merged and compressed successfully!",
+                "filename": target_filename,
+                "file_size_kb": round(size_kb, 1),
+                "max_kb_target": max_kb,
+                "download_url": f"/outputs/{job_id}/{target_filename}"
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e), "traceback": traceback.format_exc()})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -1486,6 +1567,7 @@ def make_app():
         (r"/api/live_render", ApiLiveRenderHandler),
         (r"/api/process_workflow", ApiProcessWorkflowHandler),
         (r"/api/edit_pdf_standalone", ApiEditPdfStandaloneHandler),
+        (r"/api/merge_pdfs", ApiMergePdfsHandler),
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": STATIC_DIR}),
         (r"/outputs/(.*)", tornado.web.StaticFileHandler, {"path": OUTPUT_DIR}),
     ], debug=True)

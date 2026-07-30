@@ -244,6 +244,10 @@
             <i class="fa-solid fa-download"></i> Export PDF
           </button>
 
+          <a href="https://www.sejda.com/pdf-editor" target="_blank" class="btn-primary" style="background: var(--accent-green); text-decoration: none; padding: 0.45rem 1rem; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Sejda Website
+          </a>
+
           <button type="button" id="studioReturnWfBtn" onclick="docFlowApp.saveAndReturnToWorkflow()" class="btn-primary" style="display: none; padding: 0.45rem 1rem; font-size: 0.85rem; background: var(--accent-purple);">
             <i class="fa-solid fa-check-double"></i> Save & Return to Workflow
           </button>
@@ -251,7 +255,7 @@
       </div>
 
       <!-- Studio Empty State Dropzone -->
-      <div id="studioEmptyState" class="doc-card" style="text-align: center; padding: 3rem 1.5rem; max-width: 700px; margin: 2rem auto;">
+      <div id="studioEmptyState" class="doc-card" style="text-align: center; padding: 2.5rem 1.5rem; max-width: 700px; margin: 1.5rem auto;">
         <i class="fa-solid fa-file-pdf" style="font-size: 3.5rem; color: var(--accent-blue); margin-bottom: 1rem;"></i>
         <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">Select a PDF Document to Edit in PDF Studio</h3>
         <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
@@ -260,6 +264,42 @@
         <button class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.8rem 1.8rem; font-size: 1rem;">
           <i class="fa-solid fa-folder-open"></i> Browse & Load PDF
         </button>
+      </div>
+
+      <!-- Native PDF Merge Tool with Desired Target KB Output Size -->
+      <div id="pdfMergeToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-blue);">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-code-merge"></i> Native PDF Merge Tool & Target Size Compressor
+        </h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Upload multiple PDF or image files, specify your desired maximum target output size (e.g. 125 KB, 150 KB, 250 KB), and merge them into a single compressed PDF.
+        </p>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
+          <div style="flex: 1; min-width: 250px;">
+            <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Files to Merge (PDF / Images):</label>
+            <input type="file" id="mergeInputFiles" multiple accept="application/pdf,image/*" style="font-size: 0.85rem;" onchange="docFlowApp.handleMergeFilesSelected(this.files)">
+          </div>
+
+          <div style="width: 180px;">
+            <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Desired Output Size (KB):</label>
+            <select id="mergeTargetKb" style="font-size: 0.85rem; width: 100%;">
+              <option value="125" selected>125 KB (Standard)</option>
+              <option value="150">150 KB</option>
+              <option value="200">200 KB</option>
+              <option value="300">300 KB</option>
+              <option value="500">500 KB</option>
+            </select>
+          </div>
+
+          <div style="align-self: flex-end;">
+            <button type="button" class="btn-primary" onclick="docFlowApp.executeMergePdfs()" style="padding: 0.55rem 1.2rem; font-size: 0.88rem; background: var(--accent-blue);">
+              <i class="fa-solid fa-file-export"></i> Merge & Compress PDFs
+            </button>
+          </div>
+        </div>
+
+        <div id="mergeFilesSelectedList" style="font-size: 0.78rem; color: var(--text-muted);"></div>
       </div>
 
       <!-- PDF Studio Main Workspace (3-Column Layout) -->
