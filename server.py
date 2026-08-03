@@ -2194,6 +2194,226 @@ class ApiSubmissionsHistoryHandler(BaseHandler):
             self.write({"status": "error", "message": str(e)})
 
 
+# ----------------------------------------------------------------------
+# BCWA (Boisar Welfare Chemist Association) Management Handlers
+# ----------------------------------------------------------------------
+BCWA_STORES_FILE = os.path.join(BASE_DIR, "bcwa_stores.json")
+
+def get_default_bcwa_sample_stores():
+    return [
+        {
+            "id": "store_101",
+            "store_name": "Apollo Pharmacy Boisar",
+            "owner_name": "Shri Rajesh Patil",
+            "business_type": "Proprietorship",
+            "address": "Shop No. 4, Tarapur Road, Boisar West, Palghar - 401501",
+            "contact_number": "9823456781",
+            "email": "apollo.boisar@gmail.com",
+            "pharmacist_name": "Kartik Bhosale",
+            "pharmacist_mobile": "8766759824",
+            "pharmacist_email": "kartik.pharma@gmail.com",
+            "mspc_reg_no": "189423",
+            "ppp_number": "PPP-401501-A",
+            "ppp_expiry": "2026-08-15",
+            "reg_expiry": "2028-12-31",
+            "joining_date": "2022-04-01",
+            "leaving_date": "",
+            "dl_20b": "MH-TZ4-20B-18923",
+            "dl_21b": "MH-TZ4-21B-18924",
+            "dl_issue_date": "2021-09-10",
+            "dl_expiry": "2026-09-09",
+            "fssai_number": "11521024000189",
+            "fssai_issue_date": "2022-01-15",
+            "fssai_expiry": "2027-01-14",
+            "rent_agreement_expiry": "2026-08-30",
+            "cold_storage_cert": "Yes",
+            "compliance_score": 98
+        },
+        {
+            "id": "store_102",
+            "store_name": "Sai Samarth Medical & General",
+            "owner_name": "Shankar Rampati Singh",
+            "business_type": "Proprietorship",
+            "address": "Plot 12, MIDC Main Road, Boisar, Palghar - 401501",
+            "contact_number": "8830185054",
+            "email": "shankarsingh40717@gmail.com",
+            "pharmacist_name": "Vinayak Bhosale",
+            "pharmacist_mobile": "9876543210",
+            "pharmacist_email": "vinayak.b@gmail.com",
+            "mspc_reg_no": "40161",
+            "ppp_number": "PPP-401501-B",
+            "ppp_expiry": "2026-08-10",
+            "reg_expiry": "2027-06-30",
+            "joining_date": "2020-01-15",
+            "leaving_date": "",
+            "dl_20b": "MH-TZ4-20B-40161",
+            "dl_21b": "MH-TZ4-21B-40162",
+            "dl_issue_date": "2020-05-01",
+            "dl_expiry": "2026-08-25",
+            "fssai_number": "11520024000401",
+            "fssai_issue_date": "2020-06-01",
+            "fssai_expiry": "2026-08-05",
+            "rent_agreement_expiry": "2027-05-01",
+            "cold_storage_cert": "Yes",
+            "compliance_score": 92
+        },
+        {
+            "id": "store_103",
+            "store_name": "Wellness Forever Chemist",
+            "owner_name": "Smt. Sunita Sharma",
+            "business_type": "Partnership",
+            "address": "Navapur Naka, Boisar East, Palghar - 401501",
+            "contact_number": "9970123456",
+            "email": "boisar.wellness@gmail.com",
+            "pharmacist_name": "Rohit Sharma",
+            "pharmacist_mobile": "9812345678",
+            "pharmacist_email": "rohit.pharma@gmail.com",
+            "mspc_reg_no": "123456",
+            "ppp_number": "PPP-401501-C",
+            "ppp_expiry": "2026-09-30",
+            "reg_expiry": "2029-01-01",
+            "joining_date": "2023-01-10",
+            "leaving_date": "",
+            "dl_20b": "MH-TZ4-20B-12345",
+            "dl_21b": "MH-TZ4-21B-12346",
+            "dl_issue_date": "2021-03-01",
+            "dl_expiry": "2026-11-15",
+            "fssai_number": "11522024000999",
+            "fssai_issue_date": "2021-04-01",
+            "fssai_expiry": "2026-10-10",
+            "rent_agreement_expiry": "2028-03-31",
+            "cold_storage_cert": "Yes",
+            "compliance_score": 99
+        },
+        {
+            "id": "store_104",
+            "store_name": "Lifecare Chemists & Druggists",
+            "owner_name": "Shri Amit Shah",
+            "business_type": "Proprietorship",
+            "address": "Station Road, Near Railway Flyover, Boisar - 401501",
+            "contact_number": "9898765432",
+            "email": "lifecare.boisar@gmail.com",
+            "pharmacist_name": "Pooja Mehta",
+            "pharmacist_mobile": "9765432109",
+            "pharmacist_email": "pooja.mehta@gmail.com",
+            "mspc_reg_no": "154321",
+            "ppp_number": "PPP-401501-D",
+            "ppp_expiry": "2026-08-02",
+            "reg_expiry": "2026-08-01",
+            "joining_date": "2021-08-01",
+            "leaving_date": "",
+            "dl_20b": "MH-TZ4-20B-99881",
+            "dl_21b": "MH-TZ4-21B-99882",
+            "dl_issue_date": "2019-07-01",
+            "dl_expiry": "2026-08-03",
+            "fssai_number": "11519024000888",
+            "fssai_issue_date": "2019-08-01",
+            "fssai_expiry": "2026-08-01",
+            "rent_agreement_expiry": "2026-08-02",
+            "cold_storage_cert": "Yes",
+            "compliance_score": 75
+        }
+    ]
+
+def load_bcwa_stores():
+    stores = []
+    if db is not None:
+        try:
+            docs = db.collection("bcwa_stores").stream()
+            for d in docs:
+                item = d.to_dict()
+                item["id"] = d.id
+                stores.append(item)
+            if stores:
+                return stores
+        except Exception as e:
+            print(f"⚠️ Firestore BCWA fetch note: {e}", flush=True)
+
+    if os.path.exists(BCWA_STORES_FILE):
+        try:
+            with open(BCWA_STORES_FILE, "r", encoding="utf-8") as f:
+                stores = json.load(f)
+            if stores:
+                return stores
+        except Exception as e:
+            print(f"⚠️ Local BCWA JSON read note: {e}", flush=True)
+
+    default_stores = get_default_bcwa_sample_stores()
+    save_bcwa_stores(default_stores)
+    return default_stores
+
+def save_bcwa_stores(stores):
+    try:
+        with open(BCWA_STORES_FILE, "w", encoding="utf-8") as f:
+            json.dump(stores, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write to {BCWA_STORES_FILE}: {e}", flush=True)
+
+class ApiBcwaStoresHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        stores = load_bcwa_stores()
+        self.write({"status": "success", "stores": stores, "count": len(stores)})
+
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            raw_body = self.request.body.decode("utf-8")
+            data = json.loads(raw_body)
+            store_id = data.get("id") or f"store_{int(time.time()*1000)}"
+            data["id"] = store_id
+            data["updated_at"] = datetime.now().isoformat()
+
+            stores = load_bcwa_stores()
+            updated = False
+            for idx, s in enumerate(stores):
+                if s.get("id") == store_id:
+                    stores[idx] = data
+                    updated = True
+                    break
+            if not updated:
+                stores.append(data)
+
+            save_bcwa_stores(stores)
+
+            if db is not None:
+                try:
+                    db.collection("bcwa_stores").document(store_id).set(data)
+                    print(f"✅ Saved BCWA store '{data.get('store_name')}' to Firestore.", flush=True)
+                except Exception as e:
+                    print(f"⚠️ Firestore store save note: {e}", flush=True)
+
+            self.write({"status": "success", "message": "BCWA Store profile saved successfully!", "store": data})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+    async def delete(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            store_id = self.get_argument("id", default="")
+            if not store_id:
+                self.set_status(400)
+                return self.write({"status": "error", "message": "Store ID required."})
+
+            stores = load_bcwa_stores()
+            stores = [s for s in stores if s.get("id") != store_id]
+            save_bcwa_stores(stores)
+
+            if db is not None:
+                try:
+                    db.collection("bcwa_stores").document(store_id).delete()
+                except Exception as e:
+                    print(f"⚠️ Firestore store delete note: {e}", flush=True)
+
+            self.write({"status": "success", "message": "Store deleted successfully."})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
@@ -2203,6 +2423,7 @@ def make_app():
         (r"/api/check_auth", ApiCheckAuthHandler),
         (r"/api/workflows", ApiWorkflowsHandler),
         (r"/api/submissions", ApiSubmissionsHistoryHandler),
+        (r"/api/bcwa/stores", ApiBcwaStoresHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),

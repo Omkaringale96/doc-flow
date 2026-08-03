@@ -234,22 +234,24 @@ class DocFlowApp {
   switchTab(tab) {
     const sTab = document.getElementById("servicesTab");
     const pTab = document.getElementById("pdfEditorTab");
+    const bTab = document.getElementById("bcwaTab");
 
     const sBtn = document.getElementById("navServicesBtn");
     const pBtn = document.getElementById("navPdfEditorBtn");
+    const bBtn = document.getElementById("navBcwaBtn");
 
     if (sTab) sTab.style.display = tab === "services" ? "block" : "none";
     if (pTab) pTab.style.display = tab === "pdf_editor" ? "block" : "none";
+    if (bTab) bTab.style.display = tab === "bcwa" ? "block" : "none";
 
-    if (sBtn) {
-      if (tab === "services") sBtn.classList.add("active");
-      else sBtn.classList.remove("active");
+    if (sBtn) sBtn.classList.toggle("active", tab === "services");
+    if (pBtn) pBtn.classList.toggle("active", tab === "pdf_editor");
+    if (bBtn) bBtn.classList.toggle("active", tab === "bcwa");
+
+    if (tab === "bcwa") {
+      this.loadBcwaStores();
     }
-    if (pBtn) {
-      if (tab === "pdf_editor") pBtn.classList.add("active");
-      else pBtn.classList.remove("active");
-      if (tab === "pdf_editor") this.switchPdfSubTab('sejda');
-    }
+    if (tab === "pdf_editor") this.switchPdfSubTab('sejda');
   }
 
   switchPdfSubTab(subTab) {
@@ -2104,6 +2106,437 @@ class DocFlowApp {
         </td>
       </tr>
     `).join("");
+  }
+
+  // ----------------------------------------------------------------------
+  // BCWA (Boisar Welfare Chemist Association) Platform Logic
+  // ----------------------------------------------------------------------
+  async loadBcwaStores() {
+    try {
+      const res = await fetch("/api/bcwa/stores");
+      const data = await res.json();
+      if (data.status === "success" && data.stores) {
+        this.bcwaStores = data.stores;
+        this.renderBcwaDashboard();
+        this.renderBcwaStoresTable(this.bcwaStores);
+        this.renderBcwaReminders();
+        this.renderBcwaCalendar();
+        this.renderBcwaDirectory(this.bcwaStores);
+      }
+    } catch (e) {
+      console.error("Failed to load BCWA stores:", e);
+    }
+  }
+
+  switchBcwaSubTab(subTab) {
+    const tabs = ["dashboard", "stores", "reminders", "calendar", "directory"];
+    tabs.forEach(t => {
+      const view = document.getElementById(`bcwaView${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      const btn = document.getElementById(`bcwaSubNav${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      if (view) view.style.display = t === subTab ? "block" : "none";
+      if (btn) btn.classList.toggle("active", t === subTab);
+    });
+
+    if (subTab === "reminders") this.renderBcwaReminders();
+    if (subTab === "calendar") this.renderBcwaCalendar();
+  }
+
+  getDaysRemaining(dateStr) {
+    if (!dateStr) return 999;
+    const target = new Date(dateStr);
+    const now = new Date();
+    const diffTime = target - now;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  renderBcwaDashboard() {
+    if (!this.bcwaStores) return;
+
+    let totalStores = this.bcwaStores.length;
+    let drugExpiring = 0;
+    let pppExpiring = 0;
+    let foodExpiring = 0;
+    let expiredDocs = 0;
+    let urgentItems = [];
+
+    this.bcwaStores.forEach(s => {
+      const pppDays = this.getDaysRemaining(s.ppp_expiry);
+      const dlDays = this.getDaysRemaining(s.dl_expiry);
+      const foodDays = this.getDaysRemaining(s.fssai_expiry);
+
+      if (pppDays <= 30 && pppDays > 0) pppExpiring++;
+      if (dlDays <= 30 && dlDays > 0) drugExpiring++;
+      if (foodDays <= 30 && foodDays > 0) foodExpiring++;
+
+      if (pppDays <= 0) { expiredDocs++; urgentItems.push({ store: s.store_name, doc: "PPP Card", days: pppDays, recipient: s.pharmacist_name || s.owner_name, role: "Pharmacist", phone: s.pharmacist_mobile || s.contact_number }); }
+      else if (pppDays <= 15) { urgentItems.push({ store: s.store_name, doc: "PPP Card", days: pppDays, recipient: s.pharmacist_name || s.owner_name, role: "Pharmacist", phone: s.pharmacist_mobile || s.contact_number }); }
+
+      if (dlDays <= 0) { expiredDocs++; urgentItems.push({ store: s.store_name, doc: "Drug License (20B/21B)", days: dlDays, recipient: s.owner_name, role: "Owner", phone: s.contact_number }); }
+      else if (dlDays <= 15) { urgentItems.push({ store: s.store_name, doc: "Drug License (20B/21B)", days: dlDays, recipient: s.owner_name, role: "Owner", phone: s.contact_number }); }
+
+      if (foodDays <= 0) { expiredDocs++; urgentItems.push({ store: s.store_name, doc: "Food License (FSSAI)", days: foodDays, recipient: s.owner_name, role: "Owner", phone: s.contact_number }); }
+      else if (foodDays <= 15) { urgentItems.push({ store: s.store_name, doc: "Food License (FSSAI)", days: foodDays, recipient: s.owner_name, role: "Owner", phone: s.contact_number }); }
+    });
+
+    const elTotal = document.getElementById("kpiTotalStores");
+    const elDrug = document.getElementById("kpiDrugExpiring");
+    const elPpp = document.getElementById("kpiPppExpiring");
+    const elFood = document.getElementById("kpiFoodExpiring");
+    const elExpired = document.getElementById("kpiExpiredDocs");
+
+    if (elTotal) elTotal.innerText = totalStores;
+    if (elDrug) elDrug.innerText = drugExpiring;
+    if (elPpp) elPpp.innerText = pppExpiring;
+    if (elFood) elFood.innerText = foodExpiring;
+    if (elExpired) elExpired.innerText = expiredDocs;
+
+    let score = 100 - (expiredDocs * 5) - (urgentItems.length * 2);
+    if (score < 60) score = 60;
+    const elScore = document.getElementById("kpiComplianceScore");
+    if (elScore) elScore.innerText = `${score}%`;
+
+    const urgentContainer = document.getElementById("bcwaUrgentAlertsList");
+    if (urgentContainer) {
+      if (urgentItems.length === 0) {
+        urgentContainer.innerHTML = `<div style="color: var(--accent-green); font-size: 0.88rem;"><i class="fa-solid fa-circle-check"></i> All BCWA Member Medical Stores are 100% Compliant! No urgent expiries within 15 days.</div>`;
+      } else {
+        urgentContainer.innerHTML = urgentItems.map(item => `
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <strong style="color: #ffffff; font-size: 0.9rem;">${item.store}</strong>
+              <span style="font-size: 0.8rem; color: #f87171; margin-left: 0.5rem;">[${item.doc}] ${item.days <= 0 ? 'EXPIRED' : `Expires in ${item.days} Days`}</span>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+                Routing: <span style="color: var(--accent-blue); font-weight: 700;">Notify ${item.role} (${item.recipient})</span> | Mobile: ${item.phone}
+              </div>
+            </div>
+            <button class="btn-primary" style="padding: 0.3rem 0.7rem; font-size: 0.78rem; background: #22c55e;" onclick="docFlowApp.sendSingleReminder('${item.doc}', '${item.recipient}', '${item.phone}', '${item.store}')">
+              <i class="fa-brands fa-whatsapp"></i> Send WhatsApp Reminder
+            </button>
+          </div>
+        `).join("");
+      }
+    }
+  }
+
+  renderBcwaStoresTable(stores) {
+    const tbody = document.getElementById("bcwaStoresTableBody");
+    if (!tbody) return;
+
+    if (!stores || stores.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No BCWA member stores registered yet. Click 'Register New Store' to add!</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = stores.map(s => {
+      const pppDays = this.getDaysRemaining(s.ppp_expiry);
+      const dlDays = this.getDaysRemaining(s.dl_expiry);
+      const foodDays = this.getDaysRemaining(s.fssai_expiry);
+
+      const pppBadge = pppDays <= 0 ? '<span style="color: #ef4444; font-weight: 700;">EXPIRED</span>' : (pppDays <= 30 ? `<span style="color: #f59e0b; font-weight: 700;">${s.ppp_expiry} (${pppDays}d)</span>` : `<span style="color: var(--accent-green);">${s.ppp_expiry || '-'}</span>`);
+      const dlBadge = dlDays <= 0 ? '<span style="color: #ef4444; font-weight: 700;">EXPIRED</span>' : (dlDays <= 30 ? `<span style="color: #f59e0b; font-weight: 700;">${s.dl_expiry} (${dlDays}d)</span>` : `<span style="color: var(--accent-green);">${s.dl_expiry || '-'}</span>`);
+      const foodBadge = foodDays <= 0 ? '<span style="color: #ef4444; font-weight: 700;">EXPIRED</span>' : (foodDays <= 30 ? `<span style="color: #f59e0b; font-weight: 700;">${s.fssai_expiry} (${foodDays}d)</span>` : `<span style="color: var(--accent-green);">${s.fssai_expiry || '-'}</span>`);
+
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 0.75rem;">
+            <strong style="color: var(--text-bright); display: block;">${s.store_name}</strong>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${s.address || 'Boisar, Palghar'}</span>
+          </td>
+          <td style="padding: 0.75rem;">
+            <div style="font-weight: 600; color: var(--accent-blue);">${s.owner_name}</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${s.contact_number}</span>
+          </td>
+          <td style="padding: 0.75rem;">
+            <div style="font-weight: 600; color: var(--accent-purple);">${s.pharmacist_name || '-'}</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">MSPC: ${s.mspc_reg_no || '-'}</span>
+          </td>
+          <td style="padding: 0.75rem;">${pppBadge}</td>
+          <td style="padding: 0.75rem;">${dlBadge}</td>
+          <td style="padding: 0.75rem;">${foodBadge}</td>
+          <td style="padding: 0.75rem;">
+            <span style="background: rgba(34,197,94,0.15); color: #4ade80; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">${s.compliance_score || 95}%</span>
+          </td>
+          <td style="padding: 0.75rem; text-align: right;">
+            <button class="btn-back" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="docFlowApp.openAddBcwaStoreModal('${s.id}')"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+            <button class="btn-back" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaStore('${s.id}')"><i class="fa-solid fa-trash-can"></i></button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  filterBcwaStores(query) {
+    if (!this.bcwaStores) return;
+    const q = (query || "").toLowerCase().trim();
+    if (!q) {
+      this.renderBcwaStoresTable(this.bcwaStores);
+      return;
+    }
+    const filtered = this.bcwaStores.filter(s =>
+      (s.store_name || "").toLowerCase().includes(q) ||
+      (s.owner_name || "").toLowerCase().includes(q) ||
+      (s.pharmacist_name || "").toLowerCase().includes(q) ||
+      (s.mspc_reg_no || "").toLowerCase().includes(q)
+    );
+    this.renderBcwaStoresTable(filtered);
+  }
+
+  renderBcwaReminders() {
+    const container = document.getElementById("bcwaRemindersListContainer");
+    if (!container || !this.bcwaStores) return;
+
+    const recipientFilter = document.getElementById("bcwaReminderFilterRecipient")?.value || "ALL";
+    const tierFilter = document.getElementById("bcwaReminderFilterTier")?.value || "ALL";
+
+    let reminders = [];
+    this.bcwaStores.forEach(s => {
+      const docs = [
+        { name: "PPP Expiry", date: s.ppp_expiry, recipient: s.pharmacist_name || s.owner_name, role: "PHARMACIST", mobile: s.pharmacist_mobile || s.contact_number },
+        { name: "Registration Expiry", date: s.reg_expiry, recipient: s.pharmacist_name || s.owner_name, role: "PHARMACIST", mobile: s.pharmacist_mobile || s.contact_number },
+        { name: "Drug License (20B/21B)", date: s.dl_expiry, recipient: s.owner_name, role: "OWNER", mobile: s.contact_number },
+        { name: "Food License (FSSAI)", date: s.fssai_expiry, recipient: s.owner_name, role: "OWNER", mobile: s.contact_number },
+        { name: "Rent Agreement", date: s.rent_agreement_expiry, recipient: s.owner_name, role: "OWNER", mobile: s.contact_number }
+      ];
+
+      docs.forEach(d => {
+        if (!d.date) return;
+        const days = this.getDaysRemaining(d.date);
+        let tier = "FUTURE";
+        if (days <= 0) tier = "EXPIRED";
+        else if (days <= 15) tier = "URGENT";
+        else if (days <= 30) tier = "UPCOMING";
+
+        reminders.push({
+          store: s.store_name,
+          docName: d.name,
+          expiryDate: d.date,
+          daysLeft: days,
+          recipient: d.recipient,
+          role: d.role,
+          mobile: d.mobile,
+          tier: tier
+        });
+      });
+    });
+
+    if (recipientFilter !== "ALL") {
+      reminders = reminders.filter(r => r.role === recipientFilter);
+    }
+    if (tierFilter !== "ALL") {
+      reminders = reminders.filter(r => r.tier === tierFilter);
+    }
+
+    reminders.sort((a, b) => a.daysLeft - b.daysLeft);
+
+    if (reminders.length === 0) {
+      container.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No reminders matching selected filters.</div>`;
+      return;
+    }
+
+    container.innerHTML = reminders.map(r => `
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+        <div>
+          <strong style="color: var(--text-bright); font-size: 0.9rem;">${r.store}</strong>
+          <span style="font-size: 0.8rem; color: var(--accent-blue); margin-left: 0.5rem;">[${r.docName}]</span>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Recipient: <strong style="color: ${r.role === 'PHARMACIST' ? 'var(--accent-purple)' : 'var(--accent-green)'};">${r.role} (${r.recipient})</strong> | Mobile: ${r.mobile}
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.8rem;">
+          <span style="font-size: 0.82rem; font-weight: 700; color: ${r.daysLeft <= 0 ? '#ef4444' : (r.daysLeft <= 15 ? '#f59e0b' : 'var(--accent-green)')};">
+            ${r.daysLeft <= 0 ? 'EXPIRED' : `Due in ${r.daysLeft} days (${r.expiryDate})`}
+          </span>
+          <button class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: #22c55e;" onclick="docFlowApp.sendSingleReminder('${r.docName}', '${r.recipient}', '${r.mobile}', '${r.store}')">
+            <i class="fa-brands fa-whatsapp"></i> Notify ${r.role}
+          </button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  renderBcwaCalendar() {
+    const container = document.getElementById("bcwaCalendarContainer");
+    if (!container || !this.bcwaStores) return;
+
+    let calendarEvents = [];
+    this.bcwaStores.forEach(s => {
+      if (s.ppp_expiry) calendarEvents.push({ date: s.ppp_expiry, title: `${s.store_name} - PPP Expiry`, color: "#a855f7" });
+      if (s.dl_expiry) calendarEvents.push({ date: s.dl_expiry, title: `${s.store_name} - Drug License`, color: "#f59e0b" });
+      if (s.fssai_expiry) calendarEvents.push({ date: s.fssai_expiry, title: `${s.store_name} - Food License`, color: "#3b82f6" });
+    });
+
+    calendarEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.8rem;">
+        ${calendarEvents.map(e => `
+          <div style="background: rgba(255,255,255,0.04); border-left: 4px solid ${e.color}; border-radius: 6px; padding: 0.8rem;">
+            <div style="font-size: 0.78rem; font-weight: 700; color: ${e.color};">${e.date}</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-bright); margin-top: 0.2rem;">${e.title}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  renderBcwaDirectory(stores) {
+    const grid = document.getElementById("bcwaDirectoryGrid");
+    if (!grid) return;
+
+    if (!stores || stores.length === 0) {
+      grid.innerHTML = `<div style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">No contact records found.</div>`;
+      return;
+    }
+
+    grid.innerHTML = stores.map(s => `
+      <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1rem;">
+        <h4 style="margin: 0 0 0.5rem 0; color: var(--text-bright); font-size: 0.95rem;">${s.store_name}</h4>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.8rem;">${s.address || 'Boisar, Palghar'}</p>
+        
+        <div style="background: rgba(255,255,255,0.03); padding: 0.6rem; border-radius: 6px; margin-bottom: 0.5rem;">
+          <div style="font-size: 0.75rem; color: var(--accent-green); font-weight: 700;">Owner: ${s.owner_name}</div>
+          <div style="font-size: 0.8rem; color: var(--text-bright); display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
+            <span><i class="fa-solid fa-phone"></i> ${s.contact_number}</span>
+            <button class="btn-back" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;" onclick="docFlowApp.copyTextToClipboard('${s.contact_number}')">Copy</button>
+          </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); padding: 0.6rem; border-radius: 6px;">
+          <div style="font-size: 0.75rem; color: var(--accent-purple); font-weight: 700;">Pharmacist: ${s.pharmacist_name || 'Not Assigned'}</div>
+          <div style="font-size: 0.8rem; color: var(--text-bright); display: flex; justify-content: space-between; align-items: center; margin-top: 0.2rem;">
+            <span><i class="fa-solid fa-phone"></i> ${s.pharmacist_mobile || '-'}</span>
+            <button class="btn-back" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;" onclick="docFlowApp.copyTextToClipboard('${s.pharmacist_mobile}')">Copy</button>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  filterBcwaDirectory(query) {
+    if (!this.bcwaStores) return;
+    const q = (query || "").toLowerCase().trim();
+    if (!q) {
+      this.renderBcwaDirectory(this.bcwaStores);
+      return;
+    }
+    const filtered = this.bcwaStores.filter(s =>
+      (s.store_name || "").toLowerCase().includes(q) ||
+      (s.owner_name || "").toLowerCase().includes(q) ||
+      (s.pharmacist_name || "").toLowerCase().includes(q) ||
+      (s.contact_number || "").includes(q)
+    );
+    this.renderBcwaDirectory(filtered);
+  }
+
+  openAddBcwaStoreModal(storeId = "") {
+    document.getElementById("bcwaStoreId").value = storeId;
+    if (storeId && this.bcwaStores) {
+      const s = this.bcwaStores.find(item => item.id === storeId);
+      if (s) {
+        document.getElementById("bcwaStoreName").value = s.store_name || "";
+        document.getElementById("bcwaOwnerName").value = s.owner_name || "";
+        document.getElementById("bcwaBusinessType").value = s.business_type || "Proprietorship";
+        document.getElementById("bcwaContactNumber").value = s.contact_number || "";
+        document.getElementById("bcwaEmail").value = s.email || "";
+        document.getElementById("bcwaAddress").value = s.address || "";
+        document.getElementById("bcwaPharmacistName").value = s.pharmacist_name || "";
+        document.getElementById("bcwaPharmacistMobile").value = s.pharmacist_mobile || "";
+        document.getElementById("bcwaPharmacistEmail").value = s.pharmacist_email || "";
+        document.getElementById("bcwaMspcRegNo").value = s.mspc_reg_no || "";
+        document.getElementById("bcwaPppNumber").value = s.ppp_number || "";
+        document.getElementById("bcwaPppExpiry").value = s.ppp_expiry || "";
+        document.getElementById("bcwaRegExpiry").value = s.reg_expiry || "";
+        document.getElementById("bcwaDl20b").value = s.dl_20b || "";
+        document.getElementById("bcwaDl21b").value = s.dl_21b || "";
+        document.getElementById("bcwaDlIssueDate").value = s.dl_issue_date || "";
+        document.getElementById("bcwaDlExpiry").value = s.dl_expiry || "";
+        document.getElementById("bcwaFssaiNumber").value = s.fssai_number || "";
+        document.getElementById("bcwaFssaiExpiry").value = s.fssai_expiry || "";
+        document.getElementById("bcwaRentExpiry").value = s.rent_agreement_expiry || "";
+      }
+    } else {
+      const ids = ["bcwaStoreName", "bcwaOwnerName", "bcwaContactNumber", "bcwaEmail", "bcwaAddress", "bcwaPharmacistName", "bcwaPharmacistMobile", "bcwaPharmacistEmail", "bcwaMspcRegNo", "bcwaPppNumber", "bcwaPppExpiry", "bcwaRegExpiry", "bcwaDl20b", "bcwaDl21b", "bcwaDlIssueDate", "bcwaDlExpiry", "bcwaFssaiNumber", "bcwaFssaiExpiry", "bcwaRentExpiry"];
+      ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    }
+    document.getElementById("bcwaStoreModal").style.display = "flex";
+  }
+
+  closeBcwaStoreModal() {
+    document.getElementById("bcwaStoreModal").style.display = "none";
+  }
+
+  async handleBcwaStoreSubmit(event) {
+    event.preventDefault();
+    const payload = {
+      id: document.getElementById("bcwaStoreId").value || undefined,
+      store_name: document.getElementById("bcwaStoreName").value.trim(),
+      owner_name: document.getElementById("bcwaOwnerName").value.trim(),
+      business_type: document.getElementById("bcwaBusinessType").value,
+      contact_number: document.getElementById("bcwaContactNumber").value.trim(),
+      email: document.getElementById("bcwaEmail").value.trim(),
+      address: document.getElementById("bcwaAddress").value.trim(),
+      pharmacist_name: document.getElementById("bcwaPharmacistName").value.trim(),
+      pharmacist_mobile: document.getElementById("bcwaPharmacistMobile").value.trim(),
+      pharmacist_email: document.getElementById("bcwaPharmacistEmail").value.trim(),
+      mspc_reg_no: document.getElementById("bcwaMspcRegNo").value.trim(),
+      ppp_number: document.getElementById("bcwaPppNumber").value.trim(),
+      ppp_expiry: document.getElementById("bcwaPppExpiry").value,
+      reg_expiry: document.getElementById("bcwaRegExpiry").value,
+      dl_20b: document.getElementById("bcwaDl20b").value.trim(),
+      dl_21b: document.getElementById("bcwaDl21b").value.trim(),
+      dl_issue_date: document.getElementById("bcwaDlIssueDate").value,
+      dl_expiry: document.getElementById("bcwaDlExpiry").value,
+      fssai_number: document.getElementById("bcwaFssaiNumber").value.trim(),
+      fssai_expiry: document.getElementById("bcwaFssaiExpiry").value,
+      rent_agreement_expiry: document.getElementById("bcwaRentExpiry").value,
+      compliance_score: 96
+    };
+
+    try {
+      const res = await fetch("/api/bcwa/add_store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        this.showToast(`Store '${payload.store_name}' saved successfully!`);
+        this.closeBcwaStoreModal();
+        this.loadBcwaStores();
+      } else {
+        alert(data.message || "Failed to save store.");
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  async deleteBcwaStore(storeId) {
+    if (!confirm("Are you sure you want to remove this medical store profile from BCWA Vault?")) return;
+    try {
+      const res = await fetch(`/api/bcwa/add_store?id=${storeId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.status === "success") {
+        this.showToast("Store profile deleted.");
+        this.loadBcwaStores();
+      }
+    } catch (e) {
+      alert("Error deleting store: " + e.message);
+    }
+  }
+
+  sendSingleReminder(docName, recipient, mobile, storeName) {
+    const cleanMobile = (mobile || "").replace(/\D/g, '');
+    const message = `Hello ${recipient}, This is an automated reminder from Boisar Welfare Chemist Association (BCWA). Document '${docName}' for medical store '${storeName}' is due for renewal. Please submit renewal documents promptly.`;
+    const waUrl = `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+    this.showToast(`Sent WhatsApp reminder trigger to ${recipient} (${cleanMobile})`);
+  }
+
+  triggerBulkReminders() {
+    this.showToast("⚡ BCWA Automated Expiry Notification Service Active!");
+    this.switchBcwaSubTab("reminders");
   }
 }
 
