@@ -1,13 +1,29 @@
 [
   {
-    "contact_number": "9876543210",
-    "pharmacist_mobile": "8766759824",
     "updated_at": "2026-08-04T00:36:29.532137",
-    "id": "store_1785783981633",
-    "ppp_expiry": "2026-09-15",
-    "pharmacist_name": "Kartik Bhosale",
+    "contact_number": "9876543210",
     "store_name": "Shree Chemist Boisar",
+    "pharmacist_name": "Kartik Bhosale",
+    "mspc_reg_no": "189423",
     "owner_name": "Shri Omkar Ingale",
-    "mspc_reg_no": "189423"
+    "pharmacist_mobile": "8766759824",
+    "id": "store_1785783981633",
+    "ppp_expiry": "2026-09-15"
+  },
+  {
+    "address": "Audit Address, Boisar",
+    "store_name": "Audit Test Medical Store",
+    "updated_at": "2026-08-04T00:50:17.141457",
+    "contact_number": "9998887770",
+    "reg_expiry": "2028-01-01",
+    "pharmacist_name": "Audit Pharmacist",
+    "mspc_reg_no": "99999",
+    "pharmacist_mobile": "9998887771",
+    "business_type": "Proprietorship",
+    "id": "store_1785784817141",
+    "email": "audit@store.com",
+    "ppp_expiry": "2026-09-01",
+    "owner_name": "Audit Owner",
+    "ppp_number": "PPP-AUDIT-1"
   }
 ]

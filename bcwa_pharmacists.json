@@ -1,0 +1,29 @@
+[
+  {
+    "mspc_reg_no": "199001",
+    "pharmacist_mobile": "9876511111",
+    "updated_at": "2026-08-04T00:50:12.789467",
+    "store_id": "store_1785784812065",
+    "ppp_expiry": "2027-11-30",
+    "id": "pharm_1785784812302",
+    "pharmacist_name": "Pooja Patil (Senior)"
+  },
+  {
+    "mspc_reg_no": "88888",
+    "pharmacist_mobile": "9998887772",
+    "updated_at": "2026-08-04T00:50:17.262902",
+    "id": "store_1785784817141",
+    "ppp_expiry": "2026-10-01",
+    "store_name": "Audit Test Medical Store",
+    "pharmacist_name": "Updated Audit Pharmacist"
+  },
+  {
+    "mspc_reg_no": "88888",
+    "pharmacist_mobile": "9998887772",
+    "updated_at": "2026-08-04T00:50:22.439811",
+    "id": "store_1785784822320",
+    "ppp_expiry": "2026-10-01",
+    "store_name": "Audit Test Medical Store",
+    "pharmacist_name": "Updated Audit Pharmacist"
+  }
+]

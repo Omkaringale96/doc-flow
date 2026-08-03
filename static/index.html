@@ -1338,6 +1338,25 @@
         </div>
       </form>
     </div>
+  <!-- MODAL: BCWA MEDICAL STORE FULL PROFILE & PHARMACISTS MASTER DETAIL -->
+  <div id="bcwaStoreDetailModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 900px; border-color: var(--accent-blue);">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin: 0;" id="detailStoreTitle"><i class="fa-solid fa-hospital" style="color: var(--accent-blue);"></i> Medical Store Master Profile</h3>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="detailStoreSub">Store Vault & Assigned Pharmacists</span>
+        </div>
+        <button class="btn-close" onclick="docFlowApp.closeStoreDetailModal()">&times;</button>
+      </div>
+
+      <div id="detailModalBody" style="margin-top: 1rem; max-height: 70vh; overflow-y: auto;">
+        <!-- Dynamically rendered -->
+      </div>
+
+      <div style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: 0.8rem;">
+        <button class="btn-back" onclick="docFlowApp.closeStoreDetailModal()">Close</button>
+      </div>
+    </div>
   </div>
 
   <script src="/static/app.js"></script>

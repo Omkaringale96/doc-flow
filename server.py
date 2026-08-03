@@ -1385,8 +1385,7 @@ Generated Date        : {current_date_str}
             )
             print(f"✅ [STEP 6 OK] Cloudinary ZIP URL: {cloudinary_zip_url}", flush=True)
 
-            print("💾 [STEP 7] Saving submission entry to DB...", flush=True)
-            log_submission({
+            sub_payload = {
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "name": applicant_name,
                 "reg_number": reg_number,
@@ -1400,8 +1399,10 @@ Generated Date        : {current_date_str}
                 "files_count": len(processed_files_summary),
                 "zip_size_kb": zip_size_kb,
                 "cloudinary_zip_url": cloudinary_zip_url
-            })
-            print("✅ [STEP 7 OK] DB Submission log complete.", flush=True)
+            }
+            log_submission(sub_payload)
+            sync_workflow_to_bcwa(sub_payload)
+            print("✅ [STEP 7 OK] DB Submission log & BCWA Master Database Sync complete.", flush=True)
 
             print("🎉 [STEP 8] Returning JSON response to client.", flush=True)
             print("==================================================", flush=True)
@@ -2198,6 +2199,8 @@ class ApiSubmissionsHistoryHandler(BaseHandler):
 # BCWA (Boisar Welfare Chemist Association) Management Handlers
 # ----------------------------------------------------------------------
 BCWA_STORES_FILE = os.path.join(BASE_DIR, "bcwa_stores.json")
+BCWA_PHARMACISTS_FILE = os.path.join(BASE_DIR, "bcwa_pharmacists.json")
+BCWA_RENEWALS_FILE = os.path.join(BASE_DIR, "bcwa_renewals.json")
 
 def get_default_bcwa_sample_stores():
     return [
@@ -2209,15 +2212,6 @@ def get_default_bcwa_sample_stores():
             "address": "Shop No. 4, Tarapur Road, Boisar West, Palghar - 401501",
             "contact_number": "9823456781",
             "email": "apollo.boisar@gmail.com",
-            "pharmacist_name": "Kartik Bhosale",
-            "pharmacist_mobile": "8766759824",
-            "pharmacist_email": "kartik.pharma@gmail.com",
-            "mspc_reg_no": "189423",
-            "ppp_number": "PPP-401501-A",
-            "ppp_expiry": "2026-08-15",
-            "reg_expiry": "2028-12-31",
-            "joining_date": "2022-04-01",
-            "leaving_date": "",
             "dl_20b": "MH-TZ4-20B-18923",
             "dl_21b": "MH-TZ4-21B-18924",
             "dl_issue_date": "2021-09-10",
@@ -2237,15 +2231,6 @@ def get_default_bcwa_sample_stores():
             "address": "Plot 12, MIDC Main Road, Boisar, Palghar - 401501",
             "contact_number": "8830185054",
             "email": "shankarsingh40717@gmail.com",
-            "pharmacist_name": "Vinayak Bhosale",
-            "pharmacist_mobile": "9876543210",
-            "pharmacist_email": "vinayak.b@gmail.com",
-            "mspc_reg_no": "40161",
-            "ppp_number": "PPP-401501-B",
-            "ppp_expiry": "2026-08-10",
-            "reg_expiry": "2027-06-30",
-            "joining_date": "2020-01-15",
-            "leaving_date": "",
             "dl_20b": "MH-TZ4-20B-40161",
             "dl_21b": "MH-TZ4-21B-40162",
             "dl_issue_date": "2020-05-01",
@@ -2265,15 +2250,6 @@ def get_default_bcwa_sample_stores():
             "address": "Navapur Naka, Boisar East, Palghar - 401501",
             "contact_number": "9970123456",
             "email": "boisar.wellness@gmail.com",
-            "pharmacist_name": "Rohit Sharma",
-            "pharmacist_mobile": "9812345678",
-            "pharmacist_email": "rohit.pharma@gmail.com",
-            "mspc_reg_no": "123456",
-            "ppp_number": "PPP-401501-C",
-            "ppp_expiry": "2026-09-30",
-            "reg_expiry": "2029-01-01",
-            "joining_date": "2023-01-10",
-            "leaving_date": "",
             "dl_20b": "MH-TZ4-20B-12345",
             "dl_21b": "MH-TZ4-21B-12346",
             "dl_issue_date": "2021-03-01",
@@ -2293,15 +2269,6 @@ def get_default_bcwa_sample_stores():
             "address": "Station Road, Near Railway Flyover, Boisar - 401501",
             "contact_number": "9898765432",
             "email": "lifecare.boisar@gmail.com",
-            "pharmacist_name": "Pooja Mehta",
-            "pharmacist_mobile": "9765432109",
-            "pharmacist_email": "pooja.mehta@gmail.com",
-            "mspc_reg_no": "154321",
-            "ppp_number": "PPP-401501-D",
-            "ppp_expiry": "2026-08-02",
-            "reg_expiry": "2026-08-01",
-            "joining_date": "2021-08-01",
-            "leaving_date": "",
             "dl_20b": "MH-TZ4-20B-99881",
             "dl_21b": "MH-TZ4-21B-99882",
             "dl_issue_date": "2019-07-01",
@@ -2312,6 +2279,80 @@ def get_default_bcwa_sample_stores():
             "rent_agreement_expiry": "2026-08-02",
             "cold_storage_cert": "Yes",
             "compliance_score": 75
+        }
+    ]
+
+def get_default_bcwa_sample_pharmacists():
+    return [
+        {
+            "id": "pharm_101",
+            "store_id": "store_101",
+            "pharmacist_name": "Kartik Bhosale",
+            "pharmacist_mobile": "8766759824",
+            "pharmacist_email": "kartik.pharma@gmail.com",
+            "mspc_reg_no": "189423",
+            "ppp_number": "PPP-401501-A",
+            "ppp_expiry": "2026-08-15",
+            "reg_expiry": "2028-12-31",
+            "joining_date": "2022-04-01",
+            "qualification": "B.Pharm",
+            "leaving_date": ""
+        },
+        {
+            "id": "pharm_102",
+            "store_id": "store_101",
+            "pharmacist_name": "Aniket Patil",
+            "pharmacist_mobile": "9822334455",
+            "pharmacist_email": "aniket.patil@gmail.com",
+            "mspc_reg_no": "201452",
+            "ppp_number": "PPP-401501-A2",
+            "ppp_expiry": "2026-11-20",
+            "reg_expiry": "2029-05-10",
+            "joining_date": "2023-02-15",
+            "qualification": "D.Pharm",
+            "leaving_date": ""
+        },
+        {
+            "id": "pharm_103",
+            "store_id": "store_102",
+            "pharmacist_name": "Vinayak Bhosale",
+            "pharmacist_mobile": "9876543210",
+            "pharmacist_email": "vinayak.b@gmail.com",
+            "mspc_reg_no": "40161",
+            "ppp_number": "PPP-401501-B",
+            "ppp_expiry": "2026-08-10",
+            "reg_expiry": "2027-06-30",
+            "joining_date": "2020-01-15",
+            "qualification": "M.Pharm",
+            "leaving_date": ""
+        },
+        {
+            "id": "pharm_104",
+            "store_id": "store_103",
+            "pharmacist_name": "Rohit Sharma",
+            "pharmacist_mobile": "9812345678",
+            "pharmacist_email": "rohit.pharma@gmail.com",
+            "mspc_reg_no": "123456",
+            "ppp_number": "PPP-401501-C",
+            "ppp_expiry": "2026-09-30",
+            "reg_expiry": "2029-01-01",
+            "joining_date": "2023-01-10",
+            "qualification": "B.Pharm",
+            "leaving_date": ""
+        },
+        {
+            "id": "pharm_105",
+            "store_id": "store_104",
+            "pharmacist_name": "Pooja Mehta",
+            "pharmacist_mobile": "9765432109",
+            "pharmacist_email": "pooja.mehta@gmail.com",
+            "mspc_reg_no": "154321",
+            "ppp_number": "PPP-401501-D",
+            "ppp_expiry": "2026-08-02",
+            "reg_expiry": "2026-08-01",
+            "joining_date": "2021-08-01",
+            "qualification": "D.Pharm",
+            "leaving_date": ""
         }
     ]
 
@@ -2327,7 +2368,7 @@ def load_bcwa_stores():
             if stores:
                 return stores
         except Exception as e:
-            print(f"⚠️ Firestore BCWA fetch note: {e}", flush=True)
+            print(f"⚠️ Firestore BCWA stores fetch note: {e}", flush=True)
 
     if os.path.exists(BCWA_STORES_FILE):
         try:
@@ -2336,7 +2377,7 @@ def load_bcwa_stores():
             if stores:
                 return stores
         except Exception as e:
-            print(f"⚠️ Local BCWA JSON read note: {e}", flush=True)
+            print(f"⚠️ Local BCWA stores JSON read note: {e}", flush=True)
 
     default_stores = get_default_bcwa_sample_stores()
     save_bcwa_stores(default_stores)
@@ -2349,10 +2390,140 @@ def save_bcwa_stores(stores):
     except Exception as e:
         print(f"⚠️ Could not write to {BCWA_STORES_FILE}: {e}", flush=True)
 
+def load_bcwa_pharmacists():
+    pharmacists = []
+    if db is not None:
+        try:
+            docs = db.collection("bcwa_pharmacists").stream()
+            for d in docs:
+                item = d.to_dict()
+                item["id"] = d.id
+                pharmacists.append(item)
+            if pharmacists:
+                return pharmacists
+        except Exception as e:
+            print(f"⚠️ Firestore BCWA pharmacists fetch note: {e}", flush=True)
+
+    if os.path.exists(BCWA_PHARMACISTS_FILE):
+        try:
+            with open(BCWA_PHARMACISTS_FILE, "r", encoding="utf-8") as f:
+                pharmacists = json.load(f)
+            if pharmacists:
+                return pharmacists
+        except Exception as e:
+            print(f"⚠️ Local BCWA pharmacists JSON read note: {e}", flush=True)
+
+    default_pharmacists = get_default_bcwa_sample_pharmacists()
+    save_bcwa_pharmacists(default_pharmacists)
+    return default_pharmacists
+
+def save_bcwa_pharmacists(pharmacists):
+    try:
+        with open(BCWA_PHARMACISTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(pharmacists, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write to {BCWA_PHARMACISTS_FILE}: {e}", flush=True)
+
+def sync_workflow_to_bcwa(submission_data):
+    """
+    Automatically syncs completed workflow data (e.g. ppp_renewal, new_proprietorship_drug_license)
+    into BCWA Master Database (Stores & Pharmacists collections).
+    """
+    try:
+        applicant_name = submission_data.get("name", "").strip()
+        reg_no = submission_data.get("reg_number", "").strip()
+        email = submission_data.get("email", "").strip()
+        mobile = submission_data.get("mobile", "").strip()
+        workflow_title = submission_data.get("workflow", "")
+
+        stores = load_bcwa_stores()
+        pharmacists = load_bcwa_pharmacists()
+
+        # Match existing store by owner or name
+        matched_store = None
+        for s in stores:
+            if s.get("owner_name", "").lower() == applicant_name.lower() or applicant_name.lower() in s.get("store_name", "").lower():
+                matched_store = s
+                break
+
+        if not matched_store:
+            store_id = f"store_{int(datetime.now().timestamp()*1000)}"
+            matched_store = {
+                "id": store_id,
+                "store_name": f"{applicant_name}'s Medical & General",
+                "owner_name": applicant_name,
+                "business_type": "Proprietorship",
+                "address": "Boisar, Palghar",
+                "contact_number": mobile,
+                "email": email,
+                "compliance_score": 95,
+                "created_via_workflow": workflow_title,
+                "updated_at": datetime.now().isoformat()
+            }
+            stores.append(matched_store)
+            save_bcwa_stores(stores)
+            if db is not None:
+                try:
+                    db.collection("bcwa_stores").document(store_id).set(matched_store)
+                except Exception:
+                    pass
+            print(f"🔄 [BCWA SYNC] Created new Store '{matched_store['store_name']}' from workflow.", flush=True)
+
+        matched_pharm = None
+        for p in pharmacists:
+            if (reg_no and p.get("mspc_reg_no") == reg_no) or p.get("pharmacist_name", "").lower() == applicant_name.lower():
+                matched_pharm = p
+                break
+
+        if matched_pharm:
+            if reg_no: matched_pharm["mspc_reg_no"] = reg_no
+            if mobile: matched_pharm["pharmacist_mobile"] = mobile
+            if email: matched_pharm["pharmacist_email"] = email
+            matched_pharm["store_id"] = matched_store["id"]
+            matched_pharm["updated_at"] = datetime.now().isoformat()
+            save_bcwa_pharmacists(pharmacists)
+            if db is not None:
+                try:
+                    db.collection("bcwa_pharmacists").document(matched_pharm["id"]).set(matched_pharm)
+                except Exception:
+                    pass
+            print(f"🔄 [BCWA SYNC] Updated existing Pharmacist '{matched_pharm['pharmacist_name']}' for Store '{matched_store['store_name']}'.", flush=True)
+        else:
+            pharm_id = f"pharm_{int(datetime.now().timestamp()*1000)}"
+            new_pharm = {
+                "id": pharm_id,
+                "store_id": matched_store["id"],
+                "pharmacist_name": applicant_name,
+                "pharmacist_mobile": mobile,
+                "pharmacist_email": email,
+                "mspc_reg_no": reg_no,
+                "ppp_number": f"PPP-401501-{reg_no[-3:] if reg_no else 'NEW'}",
+                "ppp_expiry": "2027-12-31",
+                "reg_expiry": "2029-12-31",
+                "joining_date": datetime.now().strftime("%Y-%m-%d"),
+                "qualification": "Registered Pharmacist",
+                "created_via_workflow": workflow_title,
+                "updated_at": datetime.now().isoformat()
+            }
+            pharmacists.append(new_pharm)
+            save_bcwa_pharmacists(pharmacists)
+            if db is not None:
+                try:
+                    db.collection("bcwa_pharmacists").document(pharm_id).set(new_pharm)
+                except Exception:
+                    pass
+            print(f"🔄 [BCWA SYNC] Created & Linked new Pharmacist '{applicant_name}' to Store '{matched_store['store_name']}'.", flush=True)
+
+    except Exception as e:
+        print(f"⚠️ [BCWA SYNC ERROR]: {e}", flush=True)
+
 class ApiBcwaStoresHandler(BaseHandler):
     async def get(self):
         self.set_header("Content-Type", "application/json; charset=UTF-8")
         stores = load_bcwa_stores()
+        pharmacists = load_bcwa_pharmacists()
+        for s in stores:
+            s["pharmacists"] = [p for p in pharmacists if p.get("store_id") == s.get("id")]
         self.write({"status": "success", "stores": stores, "count": len(stores)})
 
     async def post(self):
@@ -2401,6 +2572,11 @@ class ApiBcwaStoresHandler(BaseHandler):
             stores = [s for s in stores if s.get("id") != store_id]
             save_bcwa_stores(stores)
 
+            # Unlink or remove pharmacists belonging to deleted store
+            pharmacists = load_bcwa_pharmacists()
+            pharmacists = [p for p in pharmacists if p.get("store_id") != store_id]
+            save_bcwa_pharmacists(pharmacists)
+
             if db is not None:
                 try:
                     db.collection("bcwa_stores").document(store_id).delete()
@@ -2408,6 +2584,74 @@ class ApiBcwaStoresHandler(BaseHandler):
                     print(f"⚠️ Firestore store delete note: {e}", flush=True)
 
             self.write({"status": "success", "message": "Store deleted successfully."})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiBcwaPharmacistsHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        store_id = self.get_argument("store_id", default="")
+        pharmacists = load_bcwa_pharmacists()
+        if store_id:
+            pharmacists = [p for p in pharmacists if p.get("store_id") == store_id]
+        self.write({"status": "success", "pharmacists": pharmacists, "count": len(pharmacists)})
+
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            raw_body = self.request.body.decode("utf-8")
+            data = json.loads(raw_body)
+            pharm_id = data.get("id") or f"pharm_{int(datetime.now().timestamp()*1000)}"
+            data["id"] = pharm_id
+            data["updated_at"] = datetime.now().isoformat()
+
+            pharmacists = load_bcwa_pharmacists()
+            updated = False
+            for idx, p in enumerate(pharmacists):
+                if p.get("id") == pharm_id:
+                    pharmacists[idx] = data
+                    updated = True
+                    break
+            if not updated:
+                pharmacists.append(data)
+
+            save_bcwa_pharmacists(pharmacists)
+
+            if db is not None:
+                try:
+                    db.collection("bcwa_pharmacists").document(pharm_id).set(data)
+                    print(f"✅ Saved BCWA pharmacist '{data.get('pharmacist_name')}' to Firestore.", flush=True)
+                except Exception as e:
+                    print(f"⚠️ Firestore pharmacist save note: {e}", flush=True)
+
+            self.write({"status": "success", "message": "Pharmacist profile saved successfully!", "pharmacist": data})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+    async def delete(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            pharm_id = self.get_argument("id", default="")
+            if not pharm_id:
+                self.set_status(400)
+                return self.write({"status": "error", "message": "Pharmacist ID required."})
+
+            pharmacists = load_bcwa_pharmacists()
+            pharmacists = [p for p in pharmacists if p.get("id") != pharm_id]
+            save_bcwa_pharmacists(pharmacists)
+
+            if db is not None:
+                try:
+                    db.collection("bcwa_pharmacists").document(pharm_id).delete()
+                except Exception as e:
+                    print(f"⚠️ Firestore pharmacist delete note: {e}", flush=True)
+
+            self.write({"status": "success", "message": "Pharmacist deleted successfully."})
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
@@ -2425,7 +2669,8 @@ def make_app():
         (r"/api/submissions", ApiSubmissionsHistoryHandler),
         (r"/api/bcwa/stores", ApiBcwaStoresHandler),
         (r"/api/bcwa/add_store", ApiBcwaStoresHandler),
-        (r"/api/bcwa/add_pharmacist", ApiBcwaStoresHandler),
+        (r"/api/bcwa/pharmacists", ApiBcwaPharmacistsHandler),
+        (r"/api/bcwa/add_pharmacist", ApiBcwaPharmacistsHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),
