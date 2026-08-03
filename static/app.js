@@ -249,6 +249,7 @@ class DocFlowApp {
     if (bBtn) bBtn.classList.toggle("active", tab === "bcwa");
 
     if (tab === "bcwa") {
+      this.switchBcwaSubTab(this.activeBcwaSubTab || 'dashboard');
       this.loadBcwaStores();
     }
     if (tab === "pdf_editor") this.switchPdfSubTab('sejda');
@@ -2129,6 +2130,7 @@ class DocFlowApp {
   }
 
   switchBcwaSubTab(subTab) {
+    this.activeBcwaSubTab = subTab;
     const tabs = ["dashboard", "stores", "reminders", "calendar", "directory"];
     tabs.forEach(t => {
       const view = document.getElementById(`bcwaView${t.charAt(0).toUpperCase() + t.slice(1)}`);
