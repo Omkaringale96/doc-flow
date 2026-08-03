@@ -2467,31 +2467,38 @@ class DocFlowApp {
   }
 
   async handleBcwaStoreSubmit(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || "";
+
     const payload = {
-      id: document.getElementById("bcwaStoreId").value || undefined,
-      store_name: document.getElementById("bcwaStoreName").value.trim(),
-      owner_name: document.getElementById("bcwaOwnerName").value.trim(),
-      business_type: document.getElementById("bcwaBusinessType").value,
-      contact_number: document.getElementById("bcwaContactNumber").value.trim(),
-      email: document.getElementById("bcwaEmail").value.trim(),
-      address: document.getElementById("bcwaAddress").value.trim(),
-      pharmacist_name: document.getElementById("bcwaPharmacistName").value.trim(),
-      pharmacist_mobile: document.getElementById("bcwaPharmacistMobile").value.trim(),
-      pharmacist_email: document.getElementById("bcwaPharmacistEmail").value.trim(),
-      mspc_reg_no: document.getElementById("bcwaMspcRegNo").value.trim(),
-      ppp_number: document.getElementById("bcwaPppNumber").value.trim(),
-      ppp_expiry: document.getElementById("bcwaPppExpiry").value,
-      reg_expiry: document.getElementById("bcwaRegExpiry").value,
-      dl_20b: document.getElementById("bcwaDl20b").value.trim(),
-      dl_21b: document.getElementById("bcwaDl21b").value.trim(),
-      dl_issue_date: document.getElementById("bcwaDlIssueDate").value,
-      dl_expiry: document.getElementById("bcwaDlExpiry").value,
-      fssai_number: document.getElementById("bcwaFssaiNumber").value.trim(),
-      fssai_expiry: document.getElementById("bcwaFssaiExpiry").value,
-      rent_agreement_expiry: document.getElementById("bcwaRentExpiry").value,
+      id: document.getElementById("bcwaStoreId")?.value || undefined,
+      store_name: getVal("bcwaStoreName"),
+      owner_name: getVal("bcwaOwnerName"),
+      business_type: document.getElementById("bcwaBusinessType")?.value || "Proprietorship",
+      contact_number: getVal("bcwaContactNumber"),
+      email: getVal("bcwaEmail"),
+      address: getVal("bcwaAddress"),
+      pharmacist_name: getVal("bcwaPharmacistName"),
+      pharmacist_mobile: getVal("bcwaPharmacistMobile"),
+      pharmacist_email: getVal("bcwaPharmacistEmail"),
+      mspc_reg_no: getVal("bcwaMspcRegNo"),
+      ppp_number: getVal("bcwaPppNumber"),
+      ppp_expiry: getVal("bcwaPppExpiry"),
+      reg_expiry: getVal("bcwaRegExpiry"),
+      dl_20b: getVal("bcwaDl20b"),
+      dl_21b: getVal("bcwaDl21b"),
+      dl_issue_date: getVal("bcwaDlIssueDate"),
+      dl_expiry: getVal("bcwaDlExpiry"),
+      fssai_number: getVal("bcwaFssaiNumber"),
+      fssai_expiry: getVal("bcwaFssaiExpiry"),
+      rent_agreement_expiry: getVal("bcwaRentExpiry"),
       compliance_score: 96
     };
+
+    if (!payload.store_name || !payload.owner_name || !payload.contact_number) {
+      alert("Please fill in required fields: Medical Store Name, Owner Name, and Contact Number.");
+      return;
+    }
 
     try {
       const res = await fetch("/api/bcwa/add_store", {
@@ -2501,14 +2508,15 @@ class DocFlowApp {
       });
       const data = await res.json();
       if (data.status === "success") {
-        this.showToast(`Store '${payload.store_name}' saved successfully!`);
+        this.showToast(`Store '${payload.store_name}' registered successfully!`);
         this.closeBcwaStoreModal();
-        this.loadBcwaStores();
+        await this.loadBcwaStores();
+        this.switchBcwaSubTab("stores");
       } else {
         alert(data.message || "Failed to save store.");
       }
     } catch (e) {
-      alert("Error: " + e.message);
+      alert("Error saving store: " + e.message);
     }
   }
 
