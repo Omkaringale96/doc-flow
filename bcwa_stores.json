@@ -1,13 +1,13 @@
 [
   {
+    "contact_number": "9876543210",
+    "pharmacist_mobile": "8766759824",
+    "updated_at": "2026-08-04T00:36:29.532137",
     "id": "store_1785783981633",
+    "ppp_expiry": "2026-09-15",
+    "pharmacist_name": "Kartik Bhosale",
     "store_name": "Shree Chemist Boisar",
     "owner_name": "Shri Omkar Ingale",
-    "contact_number": "9876543210",
-    "pharmacist_name": "Kartik Bhosale",
-    "pharmacist_mobile": "8766759824",
-    "mspc_reg_no": "189423",
-    "ppp_expiry": "2026-09-15",
-    "updated_at": "2026-08-04T00:36:29.532137"
+    "mspc_reg_no": "189423"
   }
 ]
