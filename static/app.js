@@ -2327,92 +2327,218 @@ class DocFlowApp {
     this.renderBcwaStoresTable(filtered);
   }
 
-  openStoreDetailModal(storeId) {
-    if (!this.bcwaStores) return;
-    const s = this.bcwaStores.find(item => item.id === storeId);
-    if (!s) return;
-
+  async openStoreDetailModal(storeId) {
     this.activeDetailStoreId = storeId;
     const container = document.getElementById("detailModalBody");
     if (!container) return;
 
-    const pharmList = (this.bcwaPharmacists || []).filter(p => p.store_id === storeId);
-
-    container.innerHTML = `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        
-        <!-- Store Info -->
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
-          <h4 style="color: var(--accent-green); margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-store"></i> ${s.store_name}</h4>
-          <div style="font-size: 0.82rem; color: var(--text-bright); line-height: 1.6;">
-            <div><strong>Owner Name:</strong> ${s.owner_name} (${s.business_type || 'Proprietorship'})</div>
-            <div><strong>Contact:</strong> ${s.contact_number} | ${s.email || 'N/A'}</div>
-            <div><strong>Address:</strong> ${s.address || 'Boisar, Palghar'}</div>
-            <div><strong>Compliance Score:</strong> <span style="color: #4ade80; font-weight: 700;">${s.compliance_score || 95}%</span></div>
-          </div>
-        </div>
-
-        <!-- Licenses Summary -->
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
-          <h4 style="color: #f59e0b; margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-id-card"></i> Licenses & Agreement Status</h4>
-          <div style="font-size: 0.82rem; color: var(--text-bright); line-height: 1.6;">
-            <div><strong>Drug License (20B/21B):</strong> ${s.dl_20b || 'N/A'} / ${s.dl_21b || 'N/A'}</div>
-            <div><strong>DL Expiry:</strong> <span style="color: #f59e0b; font-weight: 700;">${s.dl_expiry || 'N/A'}</span></div>
-            <div><strong>Food License (FSSAI):</strong> ${s.fssai_number || 'N/A'} (Exp: ${s.fssai_expiry || 'N/A'})</div>
-            <div><strong>Rent Agreement Expiry:</strong> ${s.rent_agreement_expiry || 'N/A'}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Assigned Pharmacists List -->
-      <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--accent-purple); border-radius: 10px; padding: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-          <h4 style="color: var(--accent-purple); margin: 0; font-size: 0.95rem;">
-            <i class="fa-solid fa-user-doctor"></i> Assigned Registered Pharmacists (${pharmList.length})
-          </h4>
-          <button class="btn-primary" style="background: var(--accent-purple); font-size: 0.78rem; padding: 0.3rem 0.7rem;" onclick="docFlowApp.openAddPharmacistModal('${s.id}')">
-            <i class="fa-solid fa-plus"></i> Add Pharmacist to Store
-          </button>
-        </div>
-
-        ${pharmList.length === 0 ? `
-          <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-            No Pharmacist assigned to this store profile yet. Click 'Add Pharmacist to Store' to assign!
-          </div>
-        ` : `
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.8rem;">
-            ${pharmList.map(p => `
-              <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                  <div>
-                    <strong style="color: #ffffff; font-size: 0.9rem;">${p.pharmacist_name}</strong>
-                    <span style="font-size: 0.75rem; color: var(--accent-purple); margin-left: 0.4rem;">[${p.qualification || 'Registered Pharmacist'}]</span>
-                  </div>
-                  <div style="display: flex; gap: 0.3rem;">
-                    <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="docFlowApp.openAddPharmacistModal('${s.id}', '${p.id}')"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaPharmacist('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-                  </div>
-                </div>
-
-                <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.5;">
-                  <div><strong>MSPC Reg No:</strong> ${p.mspc_reg_no || 'N/A'} | <strong>PPP No:</strong> ${p.ppp_number || 'N/A'}</div>
-                  <div><strong>Mobile:</strong> ${p.pharmacist_mobile || 'N/A'} | <strong>Email:</strong> ${p.pharmacist_email || 'N/A'}</div>
-                  <div><strong>PPP Expiry:</strong> <span style="color: #c084fc; font-weight: 700;">${p.ppp_expiry || 'N/A'}</span> | <strong>Reg Expiry:</strong> ${p.reg_expiry || 'N/A'}</div>
-                  <div><strong>Joining Date:</strong> ${p.joining_date || 'N/A'}</div>
-                </div>
-              </div>
-            `).join("")}
-          </div>
-        `}
-      </div>
-    `;
-
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--accent-blue);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p style="margin-top: 0.5rem;">Loading Master Store Profile...</p></div>`;
     document.getElementById("bcwaStoreDetailModal").style.display = "flex";
+
+    try {
+      const res = await fetch(`/api/bcwa/store_detail?id=${storeId}`);
+      const data = await res.json();
+      if (data.status !== "success") {
+        container.innerHTML = `<div style="color: #ef4444; padding: 1rem;">Failed to load store profile: ${data.message}</div>`;
+        return;
+      }
+
+      const s = data.store;
+      const pharmList = data.pharmacists || [];
+      const renewals = data.renewals || [];
+      const activityLogs = data.activity_logs || [];
+
+      document.getElementById("detailStoreTitle").innerHTML = `<i class="fa-solid fa-hospital" style="color: var(--accent-blue);"></i> ${s.store_name}`;
+      document.getElementById("detailStoreSub").innerText = `${s.owner_name} | ${s.business_type || 'Proprietorship'} | Compliance Score: ${s.compliance_score || 95}%`;
+
+      container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <!-- Store Info -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
+            <h4 style="color: var(--accent-green); margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-store"></i> Store & Owner Details</h4>
+            <div style="font-size: 0.82rem; color: var(--text-bright); line-height: 1.6;">
+              <div><strong>Owner Name:</strong> ${s.owner_name}</div>
+              <div><strong>Business Type:</strong> ${s.business_type || 'Proprietorship'}</div>
+              <div><strong>Contact:</strong> ${s.contact_number} | ${s.email || 'N/A'}</div>
+              <div><strong>Address:</strong> ${s.address || 'Boisar, Palghar'}</div>
+              <div><strong>Compliance Status:</strong> <span style="color: #4ade80; font-weight: 700;">${s.compliance_score || 95}% Compliant</span></div>
+            </div>
+          </div>
+
+          <!-- Licenses Summary -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
+            <h4 style="color: #f59e0b; margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-id-card"></i> Licenses & Agreement Status</h4>
+            <div style="font-size: 0.82rem; color: var(--text-bright); line-height: 1.6;">
+              <div><strong>Drug License (20B):</strong> ${s.dl_20b || 'N/A'}</div>
+              <div><strong>Drug License (21B):</strong> ${s.dl_21b || 'N/A'}</div>
+              <div><strong>DL Expiry:</strong> <span style="color: #f59e0b; font-weight: 700;">${s.dl_expiry || 'N/A'}</span></div>
+              <div><strong>Food License (FSSAI):</strong> ${s.fssai_number || 'N/A'} (Exp: ${s.fssai_expiry || 'N/A'})</div>
+              <div><strong>Rent Agreement Expiry:</strong> ${s.rent_agreement_expiry || 'N/A'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assigned Pharmacists List -->
+        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--accent-purple); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+            <h4 style="color: var(--accent-purple); margin: 0; font-size: 0.95rem;">
+              <i class="fa-solid fa-user-doctor"></i> Assigned Registered Pharmacists (${pharmList.length})
+            </h4>
+            <button class="btn-primary" style="background: var(--accent-purple); font-size: 0.78rem; padding: 0.3rem 0.7rem;" onclick="docFlowApp.openAddPharmacistModal('${s.id}')">
+              <i class="fa-solid fa-plus"></i> Add Pharmacist
+            </button>
+          </div>
+
+          ${pharmList.length === 0 ? `
+            <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+              No Pharmacist assigned to this store profile yet.
+            </div>
+          ` : `
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.8rem;">
+              ${pharmList.map(p => `
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                      <strong style="color: #ffffff; font-size: 0.9rem;">${p.pharmacist_name}</strong>
+                      <span style="font-size: 0.75rem; color: var(--accent-purple); margin-left: 0.4rem;">[${p.qualification || 'Registered Pharmacist'}]</span>
+                    </div>
+                    <div style="display: flex; gap: 0.3rem;">
+                      <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="docFlowApp.openAddPharmacistModal('${s.id}', '${p.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+                      <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaPharmacist('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                  </div>
+
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.4rem; line-height: 1.5;">
+                    <div><strong>MSPC Reg No:</strong> ${p.mspc_reg_no || 'N/A'} | <strong>PPP No:</strong> ${p.ppp_number || 'N/A'}</div>
+                    <div><strong>Mobile:</strong> ${p.pharmacist_mobile || 'N/A'} | <strong>Email:</strong> ${p.pharmacist_email || 'N/A'}</div>
+                    <div><strong>PPP Expiry:</strong> <span style="color: #c084fc; font-weight: 700;">${p.ppp_expiry || 'N/A'}</span> | <strong>Reg Expiry:</strong> ${p.reg_expiry || 'N/A'}</div>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          `}
+        </div>
+
+        <!-- Renewal History & Activity Log Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <!-- Renewal History -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
+            <h4 style="color: var(--accent-blue); margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-clock-rotate-left"></i> Renewal History</h4>
+            ${renewals.length === 0 ? `
+              <div style="font-size: 0.8rem; color: var(--text-muted);">No past workflow applications recorded for this store.</div>
+            ` : `
+              <div style="font-size: 0.8rem; line-height: 1.5;">
+                ${renewals.slice(0, 5).map(r => `
+                  <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
+                    <strong style="color: var(--text-bright);">${r.workflow || 'Workflow'}</strong>
+                    <div style="color: var(--text-muted); font-size: 0.75rem;">Applicant: ${r.applicant} | ${r.timestamp ? r.timestamp.slice(0, 10) : ''}</div>
+                  </div>
+                `).join("")}
+              </div>
+            `}
+          </div>
+
+          <!-- Activity Audit Log -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
+            <h4 style="color: #c084fc; margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-list-check"></i> Audit Activity Logs</h4>
+            ${activityLogs.length === 0 ? `
+              <div style="font-size: 0.8rem; color: var(--text-muted);">No activity logs recorded yet.</div>
+            ` : `
+              <div style="font-size: 0.8rem; line-height: 1.5;">
+                ${activityLogs.slice(0, 5).map(l => `
+                  <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
+                    <span style="color: #c084fc; font-size: 0.75rem; font-weight: 700;">[${l.action}]</span> <span style="color: var(--text-bright);">${l.details}</span>
+                    <div style="color: var(--text-muted); font-size: 0.72rem;">${l.timestamp ? l.timestamp.replace('T', ' ').slice(0, 16) : ''}</div>
+                  </div>
+                `).join("")}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    } catch (e) {
+      container.innerHTML = `<div style="color: #ef4444; padding: 1rem;">Error loading store profile: ${e.message}</div>`;
+    }
   }
 
   closeStoreDetailModal() {
     document.getElementById("bcwaStoreDetailModal").style.display = "none";
     this.activeDetailStoreId = null;
+  }
+
+  exportBcwaCsv() {
+    window.location.href = "/api/bcwa/export_csv";
+    this.showToast("Exporting BCWA Medical Stores & Compliance Dataset CSV...");
+  }
+
+  exportBcwaPdfReport() {
+    window.print();
+    this.showToast("Opening Print / PDF Export Report View...");
+  }
+
+  openCsvImportModal() {
+    document.getElementById("bcwaCsvImportModal").style.display = "flex";
+  }
+
+  closeCsvImportModal() {
+    document.getElementById("bcwaCsvImportModal").style.display = "none";
+  }
+
+  async handleBcwaCsvImport(event) {
+    if (event) event.preventDefault();
+    const fileInput = document.getElementById("bcwaCsvFileInput");
+    if (!fileInput || !fileInput.files[0]) {
+      alert("Please select a CSV file to import.");
+      return;
+    }
+    const file = fileInput.files[0];
+    const text = await file.text();
+
+    try {
+      const res = await fetch("/api/bcwa/import_csv", {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: text
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        this.showToast(data.message);
+        this.closeCsvImportModal();
+        await this.loadBcwaStores();
+      } else {
+        alert(data.message || "Failed to import CSV.");
+      }
+    } catch (e) {
+      alert("Error importing CSV: " + e.message);
+    }
+  }
+
+  async sendSingleReminder(docName, recipient, mobile, storeName) {
+    if (!mobile) {
+      alert("No contact number available for recipient.");
+      return;
+    }
+    const cleanMobile = mobile.replace(/[^0-9]/g, '');
+    const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const msg = `BCWA Urgent Renewal Notice: Dear ${recipient}, your ${docName} for '${storeName}' requires renewal. Please submit your application via DocFlow Pro Portal immediately.`;
+    const waUrl = `https://api.whatsapp.com/send?phone=${formattedMobile}&text=${encodeURIComponent(msg)}`;
+
+    try {
+      fetch("/api/bcwa/send_notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: "WhatsApp",
+          recipient: recipient,
+          phone: mobile,
+          store_name: storeName,
+          doc_name: docName
+        })
+      });
+    } catch (e) {}
+
+    window.open(waUrl, "_blank");
+    this.showToast(`WhatsApp reminder dispatched to ${recipient} (${mobile})!`);
   }
 
   renderBcwaReminders() {

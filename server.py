@@ -25,6 +25,8 @@ import shutil
 import zipfile
 import traceback
 from datetime import datetime
+import io
+import csv
 from io import BytesIO
 
 import cv2
@@ -2201,6 +2203,124 @@ class ApiSubmissionsHistoryHandler(BaseHandler):
 BCWA_STORES_FILE = os.path.join(BASE_DIR, "bcwa_stores.json")
 BCWA_PHARMACISTS_FILE = os.path.join(BASE_DIR, "bcwa_pharmacists.json")
 BCWA_RENEWALS_FILE = os.path.join(BASE_DIR, "bcwa_renewals.json")
+BCWA_DOCUMENTS_FILE = os.path.join(BASE_DIR, "bcwa_documents.json")
+BCWA_ACTIVITY_LOGS_FILE = os.path.join(BASE_DIR, "bcwa_activity_logs.json")
+BCWA_NOTIFICATIONS_FILE = os.path.join(BASE_DIR, "bcwa_notifications.json")
+
+def load_bcwa_activity_logs():
+    logs = []
+    if db is not None:
+        try:
+            docs = db.collection("bcwa_activity_logs").stream()
+            for d in docs:
+                item = d.to_dict()
+                item["id"] = d.id
+                logs.append(item)
+            if logs:
+                logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                return logs
+        except Exception as e:
+            print(f"⚠️ Firestore activity logs fetch note: {e}", flush=True)
+
+    if os.path.exists(BCWA_ACTIVITY_LOGS_FILE):
+        try:
+            with open(BCWA_ACTIVITY_LOGS_FILE, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+            if logs:
+                logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                return logs
+        except Exception:
+            pass
+    return []
+
+def save_bcwa_activity_logs(logs):
+    try:
+        with open(BCWA_ACTIVITY_LOGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write {BCWA_ACTIVITY_LOGS_FILE}: {e}", flush=True)
+
+def log_bcwa_activity(action, details, store_id=None, store_name=None):
+    entry = {
+        "id": f"log_{int(datetime.now().timestamp()*1000)}",
+        "timestamp": datetime.now().isoformat(),
+        "action": action,
+        "details": details,
+        "store_id": store_id or "",
+        "store_name": store_name or ""
+    }
+    logs = load_bcwa_activity_logs()
+    logs.insert(0, entry)
+    save_bcwa_activity_logs(logs)
+    if db is not None:
+        try:
+            db.collection("bcwa_activity_logs").document(entry["id"]).set(entry)
+        except Exception as e:
+            print(f"⚠️ Firestore log save note: {e}", flush=True)
+
+def load_bcwa_documents():
+    docs_list = []
+    if db is not None:
+        try:
+            docs = db.collection("bcwa_documents").stream()
+            for d in docs:
+                item = d.to_dict()
+                item["id"] = d.id
+                docs_list.append(item)
+            if docs_list:
+                return docs_list
+        except Exception as e:
+            print(f"⚠️ Firestore documents fetch note: {e}", flush=True)
+
+    if os.path.exists(BCWA_DOCUMENTS_FILE):
+        try:
+            with open(BCWA_DOCUMENTS_FILE, "r", encoding="utf-8") as f:
+                docs_list = json.load(f)
+            if docs_list:
+                return docs_list
+        except Exception:
+            pass
+    return []
+
+def save_bcwa_documents(docs_list):
+    try:
+        with open(BCWA_DOCUMENTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(docs_list, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write {BCWA_DOCUMENTS_FILE}: {e}", flush=True)
+
+def load_bcwa_renewals():
+    renewals = []
+    if db is not None:
+        try:
+            docs = db.collection("bcwa_renewals").stream()
+            for d in docs:
+                item = d.to_dict()
+                item["id"] = d.id
+                renewals.append(item)
+            if renewals:
+                renewals.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                return renewals
+        except Exception as e:
+            print(f"⚠️ Firestore renewals fetch note: {e}", flush=True)
+
+    if os.path.exists(BCWA_RENEWALS_FILE):
+        try:
+            with open(BCWA_RENEWALS_FILE, "r", encoding="utf-8") as f:
+                renewals = json.load(f)
+            if renewals:
+                renewals.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                return renewals
+        except Exception:
+            pass
+    return []
+
+def save_bcwa_renewals(renewals):
+    try:
+        with open(BCWA_RENEWALS_FILE, "w", encoding="utf-8") as f:
+            json.dump(renewals, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not write {BCWA_RENEWALS_FILE}: {e}", flush=True)
 
 def get_default_bcwa_sample_stores():
     return [
@@ -2514,6 +2634,28 @@ def sync_workflow_to_bcwa(submission_data):
                     pass
             print(f"🔄 [BCWA SYNC] Created & Linked new Pharmacist '{applicant_name}' to Store '{matched_store['store_name']}'.", flush=True)
 
+        # Add to Renewal History & Activity Log
+        renewal_entry = {
+            "id": f"ren_{int(datetime.now().timestamp()*1000)}",
+            "store_id": matched_store["id"],
+            "store_name": matched_store["store_name"],
+            "applicant": applicant_name,
+            "workflow": workflow_title,
+            "reg_number": reg_no,
+            "timestamp": datetime.now().isoformat(),
+            "status": "COMPLETED"
+        }
+        renewals = load_bcwa_renewals()
+        renewals.insert(0, renewal_entry)
+        save_bcwa_renewals(renewals)
+        if db is not None:
+            try:
+                db.collection("bcwa_renewals").document(renewal_entry["id"]).set(renewal_entry)
+            except Exception:
+                pass
+
+        log_bcwa_activity("WORKFLOW_SYNC", f"Completed workflow '{workflow_title}' for '{applicant_name}'", store_id=matched_store["id"], store_name=matched_store["store_name"])
+
     except Exception as e:
         print(f"⚠️ [BCWA SYNC ERROR]: {e}", flush=True)
 
@@ -2531,11 +2673,37 @@ class ApiBcwaStoresHandler(BaseHandler):
         try:
             raw_body = self.request.body.decode("utf-8")
             data = json.loads(raw_body)
-            store_id = data.get("id") or f"store_{int(datetime.now().timestamp()*1000)}"
-            data["id"] = store_id
+            stores = load_bcwa_stores()
+
+            # Duplicate prevention check if new store (no explicit ID given)
+            existing_match = None
+            if not data.get("id"):
+                dl_20b = (data.get("dl_20b") or "").strip().lower()
+                fssai = (data.get("fssai_number") or "").strip().lower()
+                store_name = (data.get("store_name") or "").strip().lower()
+                owner_mobile = (data.get("contact_number") or "").strip()
+
+                for s in stores:
+                    s_dl = (s.get("dl_20b") or "").strip().lower()
+                    s_fssai = (s.get("fssai_number") or "").strip().lower()
+                    s_name = (s.get("store_name") or "").strip().lower()
+                    s_mobile = (s.get("contact_number") or "").strip()
+
+                    if (dl_20b and dl_20b == s_dl) or (fssai and fssai == s_fssai) or (store_name and s_name == store_name and owner_mobile and owner_mobile == s_mobile):
+                        existing_match = s
+                        break
+
+            if existing_match:
+                store_id = existing_match["id"]
+                data["id"] = store_id
+                action_text = f"Updated existing Store record '{data.get('store_name')}' via duplicate check"
+            else:
+                store_id = data.get("id") or f"store_{int(datetime.now().timestamp()*1000)}"
+                data["id"] = store_id
+                action_text = f"Registered new Medical Store '{data.get('store_name')}'"
+
             data["updated_at"] = datetime.now().isoformat()
 
-            stores = load_bcwa_stores()
             updated = False
             for idx, s in enumerate(stores):
                 if s.get("id") == store_id:
@@ -2554,6 +2722,8 @@ class ApiBcwaStoresHandler(BaseHandler):
                 except Exception as e:
                     print(f"⚠️ Firestore store save note: {e}", flush=True)
 
+            log_bcwa_activity("STORE_SAVED", action_text, store_id=store_id, store_name=data.get("store_name"))
+
             self.write({"status": "success", "message": "BCWA Store profile saved successfully!", "store": data})
         except Exception as e:
             traceback.print_exc()
@@ -2569,6 +2739,9 @@ class ApiBcwaStoresHandler(BaseHandler):
                 return self.write({"status": "error", "message": "Store ID required."})
 
             stores = load_bcwa_stores()
+            target_store = next((s for s in stores if s.get("id") == store_id), None)
+            store_name = target_store.get("store_name", store_id) if target_store else store_id
+
             stores = [s for s in stores if s.get("id") != store_id]
             save_bcwa_stores(stores)
 
@@ -2582,6 +2755,8 @@ class ApiBcwaStoresHandler(BaseHandler):
                     db.collection("bcwa_stores").document(store_id).delete()
                 except Exception as e:
                     print(f"⚠️ Firestore store delete note: {e}", flush=True)
+
+            log_bcwa_activity("STORE_DELETED", f"Deleted Medical Store '{store_name}' and unlinked child pharmacists", store_id=store_id, store_name=store_name)
 
             self.write({"status": "success", "message": "Store deleted successfully."})
         except Exception as e:
@@ -2604,11 +2779,35 @@ class ApiBcwaPharmacistsHandler(BaseHandler):
         try:
             raw_body = self.request.body.decode("utf-8")
             data = json.loads(raw_body)
-            pharm_id = data.get("id") or f"pharm_{int(datetime.now().timestamp()*1000)}"
-            data["id"] = pharm_id
+            pharmacists = load_bcwa_pharmacists()
+
+            # Duplicate prevention check if new pharmacist
+            existing_match = None
+            if not data.get("id"):
+                mspc = (data.get("mspc_reg_no") or "").strip().lower()
+                ppp = (data.get("ppp_number") or "").strip().lower()
+                p_mobile = (data.get("pharmacist_mobile") or "").strip()
+
+                for p in pharmacists:
+                    p_mspc = (p.get("mspc_reg_no") or "").strip().lower()
+                    p_ppp = (p.get("ppp_number") or "").strip().lower()
+                    p_mob = (p.get("pharmacist_mobile") or "").strip()
+
+                    if (mspc and mspc == p_mspc) or (ppp and ppp == p_ppp) or (p_mobile and p_mobile == p_mob):
+                        existing_match = p
+                        break
+
+            if existing_match:
+                pharm_id = existing_match["id"]
+                data["id"] = pharm_id
+                action_text = f"Updated Pharmacist profile '{data.get('pharmacist_name')}' via duplicate check"
+            else:
+                pharm_id = data.get("id") or f"pharm_{int(datetime.now().timestamp()*1000)}"
+                data["id"] = pharm_id
+                action_text = f"Added Pharmacist profile '{data.get('pharmacist_name')}'"
+
             data["updated_at"] = datetime.now().isoformat()
 
-            pharmacists = load_bcwa_pharmacists()
             updated = False
             for idx, p in enumerate(pharmacists):
                 if p.get("id") == pharm_id:
@@ -2627,6 +2826,8 @@ class ApiBcwaPharmacistsHandler(BaseHandler):
                 except Exception as e:
                     print(f"⚠️ Firestore pharmacist save note: {e}", flush=True)
 
+            log_bcwa_activity("PHARMACIST_SAVED", action_text, store_id=data.get("store_id"), store_name=data.get("pharmacist_name"))
+
             self.write({"status": "success", "message": "Pharmacist profile saved successfully!", "pharmacist": data})
         except Exception as e:
             traceback.print_exc()
@@ -2642,6 +2843,9 @@ class ApiBcwaPharmacistsHandler(BaseHandler):
                 return self.write({"status": "error", "message": "Pharmacist ID required."})
 
             pharmacists = load_bcwa_pharmacists()
+            target = next((p for p in pharmacists if p.get("id") == pharm_id), None)
+            pharm_name = target.get("pharmacist_name", pharm_id) if target else pharm_id
+
             pharmacists = [p for p in pharmacists if p.get("id") != pharm_id]
             save_bcwa_pharmacists(pharmacists)
 
@@ -2651,7 +2855,209 @@ class ApiBcwaPharmacistsHandler(BaseHandler):
                 except Exception as e:
                     print(f"⚠️ Firestore pharmacist delete note: {e}", flush=True)
 
+            log_bcwa_activity("PHARMACIST_DELETED", f"Deleted Pharmacist profile '{pharm_name}'")
+
             self.write({"status": "success", "message": "Pharmacist deleted successfully."})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiBcwaStoreDetailHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            store_id = self.get_argument("id", default="")
+            if not store_id:
+                self.set_status(400)
+                return self.write({"status": "error", "message": "Store ID required."})
+
+            stores = load_bcwa_stores()
+            target_store = next((s for s in stores if s.get("id") == store_id), None)
+            if not target_store:
+                self.set_status(404)
+                return self.write({"status": "error", "message": "Medical store not found."})
+
+            pharmacists = load_bcwa_pharmacists()
+            store_pharms = [p for p in pharmacists if p.get("store_id") == store_id]
+
+            docs_list = load_bcwa_documents()
+            store_docs = [d for d in docs_list if d.get("store_id") == store_id]
+
+            renewals = load_bcwa_renewals()
+            store_renewals = [r for r in renewals if r.get("store_id") == store_id or r.get("store_name") == target_store.get("store_name")]
+
+            all_logs = load_bcwa_activity_logs()
+            store_logs = [l for l in all_logs if l.get("store_id") == store_id or l.get("store_name") == target_store.get("store_name")]
+
+            self.write({
+                "status": "success",
+                "store": target_store,
+                "pharmacists": store_pharms,
+                "documents": store_docs,
+                "renewals": store_renewals,
+                "activity_logs": store_logs
+            })
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiBcwaExportCsvHandler(BaseHandler):
+    async def get(self):
+        self.set_header("Content-Type", "text/csv; charset=UTF-8")
+        self.set_header("Content-Disposition", "attachment; filename=BCWA_Medical_Stores_Compliance.csv")
+        try:
+            stores = load_bcwa_stores()
+            pharmacists = load_bcwa_pharmacists()
+
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow([
+                "Store ID", "Store Name", "Business Type", "Owner Name", "Owner Contact", "Owner Email",
+                "Address", "DL 20B", "DL 21B", "DL Expiry", "FSSAI Number", "FSSAI Expiry", "Rent Expiry",
+                "Compliance Score", "Primary Pharmacist", "MSPC Reg No", "PPP Number", "PPP Expiry", "Pharmacist Mobile"
+            ])
+
+            for s in stores:
+                s_pharms = [p for p in pharmacists if p.get("store_id") == s.get("id")]
+                p1 = s_pharms[0] if s_pharms else {}
+                writer.writerow([
+                    s.get("id", ""),
+                    s.get("store_name", ""),
+                    s.get("business_type", ""),
+                    s.get("owner_name", ""),
+                    s.get("contact_number", ""),
+                    s.get("email", ""),
+                    s.get("address", ""),
+                    s.get("dl_20b", ""),
+                    s.get("dl_21b", ""),
+                    s.get("dl_expiry", ""),
+                    s.get("fssai_number", ""),
+                    s.get("fssai_expiry", ""),
+                    s.get("rent_agreement_expiry", ""),
+                    s.get("compliance_score", "95"),
+                    p1.get("pharmacist_name", ""),
+                    p1.get("mspc_reg_no", ""),
+                    p1.get("ppp_number", ""),
+                    p1.get("ppp_expiry", ""),
+                    p1.get("pharmacist_mobile", "")
+                ])
+
+            self.write(output.getvalue())
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write(f"Error generating CSV: {e}")
+
+
+class ApiBcwaImportCsvHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            raw_body = self.request.body.decode("utf-8")
+            stores_to_import = []
+
+            if raw_body.strip().startswith("["):
+                stores_to_import = json.loads(raw_body)
+            else:
+                # Parse CSV content
+                f = io.StringIO(raw_body)
+                reader = csv.DictReader(f)
+                for row in reader:
+                    stores_to_import.append({
+                        "store_name": row.get("Store Name") or row.get("store_name"),
+                        "owner_name": row.get("Owner Name") or row.get("owner_name"),
+                        "business_type": row.get("Business Type") or row.get("business_type") or "Proprietorship",
+                        "contact_number": row.get("Owner Contact") or row.get("contact_number"),
+                        "email": row.get("Owner Email") or row.get("email"),
+                        "address": row.get("Address") or row.get("address"),
+                        "dl_20b": row.get("DL 20B") or row.get("dl_20b"),
+                        "dl_21b": row.get("DL 21B") or row.get("dl_21b"),
+                        "dl_expiry": row.get("DL Expiry") or row.get("dl_expiry"),
+                        "fssai_number": row.get("FSSAI Number") or row.get("fssai_number"),
+                        "fssai_expiry": row.get("FSSAI Expiry") or row.get("fssai_expiry"),
+                        "rent_agreement_expiry": row.get("Rent Expiry") or row.get("rent_agreement_expiry"),
+                        "compliance_score": 95
+                    })
+
+            stores = load_bcwa_stores()
+            imported_count = 0
+
+            for new_s in stores_to_import:
+                if not new_s.get("store_name") or not new_s.get("owner_name"):
+                    continue
+                s_id = f"store_{int(datetime.now().timestamp()*1000)}_{imported_count}"
+                new_s["id"] = s_id
+                new_s["updated_at"] = datetime.now().isoformat()
+                stores.append(new_s)
+
+                if db is not None:
+                    try:
+                        db.collection("bcwa_stores").document(s_id).set(new_s)
+                    except Exception:
+                        pass
+                imported_count += 1
+
+            save_bcwa_stores(stores)
+            log_bcwa_activity("CSV_IMPORT", f"Bulk imported {imported_count} Medical Stores via CSV")
+
+            self.write({"status": "success", "message": f"Successfully imported {imported_count} Medical Stores!", "count": imported_count})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiBcwaNotificationHandler(BaseHandler):
+    async def post(self):
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        try:
+            raw_body = self.request.body.decode("utf-8")
+            data = json.loads(raw_body)
+            channel = data.get("channel", "WhatsApp")
+            recipient = data.get("recipient", "Officer")
+            phone = data.get("phone", "")
+            store_name = data.get("store_name", "")
+            doc_name = data.get("doc_name", "Renewal Notice")
+
+            notif_entry = {
+                "id": f"notif_{int(datetime.now().timestamp()*1000)}",
+                "timestamp": datetime.now().isoformat(),
+                "channel": channel,
+                "recipient": recipient,
+                "phone": phone,
+                "store_name": store_name,
+                "doc_name": doc_name,
+                "status": "SENT"
+            }
+
+            # Save notification
+            notifications = []
+            if os.path.exists(BCWA_NOTIFICATIONS_FILE):
+                try:
+                    with open(BCWA_NOTIFICATIONS_FILE, "r", encoding="utf-8") as f:
+                        notifications = json.load(f)
+                except Exception:
+                    pass
+            notifications.insert(0, notif_entry)
+            try:
+                with open(BCWA_NOTIFICATIONS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(notifications, f, indent=2)
+            except Exception:
+                pass
+
+            if db is not None:
+                try:
+                    db.collection("bcwa_notifications").document(notif_entry["id"]).set(notif_entry)
+                except Exception:
+                    pass
+
+            log_bcwa_activity("NOTIFICATION_SENT", f"Dispatched {channel} alert for '{doc_name}' to {recipient} ({phone})", store_name=store_name)
+
+            self.write({"status": "success", "message": f"{channel} reminder sent successfully to {recipient}!", "notification": notif_entry})
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
@@ -2669,8 +3075,12 @@ def make_app():
         (r"/api/submissions", ApiSubmissionsHistoryHandler),
         (r"/api/bcwa/stores", ApiBcwaStoresHandler),
         (r"/api/bcwa/add_store", ApiBcwaStoresHandler),
+        (r"/api/bcwa/store_detail", ApiBcwaStoreDetailHandler),
         (r"/api/bcwa/pharmacists", ApiBcwaPharmacistsHandler),
         (r"/api/bcwa/add_pharmacist", ApiBcwaPharmacistsHandler),
+        (r"/api/bcwa/export_csv", ApiBcwaExportCsvHandler),
+        (r"/api/bcwa/import_csv", ApiBcwaImportCsvHandler),
+        (r"/api/bcwa/send_notification", ApiBcwaNotificationHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),

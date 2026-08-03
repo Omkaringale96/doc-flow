@@ -646,13 +646,22 @@
 
         <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
           <button class="btn-primary" style="background: var(--accent-green);" onclick="docFlowApp.openAddBcwaStoreModal()">
-            <i class="fa-solid fa-plus-circle"></i> Register Medical Store
+            <i class="fa-solid fa-plus-circle"></i> Register Store
           </button>
           <button class="btn-primary" style="background: var(--accent-purple);" onclick="docFlowApp.openAddPharmacistModal()">
             <i class="fa-solid fa-user-doctor"></i> Add Pharmacist
           </button>
+          <button class="btn-back" style="border-color: var(--accent-blue); color: var(--accent-blue);" onclick="docFlowApp.openCsvImportModal()">
+            <i class="fa-solid fa-file-import"></i> Import CSV
+          </button>
+          <button class="btn-back" style="border-color: #f59e0b; color: #f59e0b;" onclick="docFlowApp.exportBcwaCsv()">
+            <i class="fa-solid fa-file-excel"></i> Export CSV
+          </button>
+          <button class="btn-back" style="border-color: #3b82f6; color: #3b82f6;" onclick="docFlowApp.exportBcwaPdfReport()">
+            <i class="fa-solid fa-file-pdf"></i> PDF Report
+          </button>
           <button class="btn-back" style="border-color: #4ade80; color: #4ade80;" onclick="docFlowApp.triggerBulkReminders()">
-            <i class="fa-solid fa-bell"></i> Bulk Expiry Alerts
+            <i class="fa-solid fa-bell"></i> Bulk Alerts
           </button>
         </div>
       </div>
@@ -777,9 +786,12 @@
               <select id="bcwaReminderFilterTier" onchange="docFlowApp.renderBcwaReminders()" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
                 <option value="ALL">All Expiry Tiers</option>
                 <option value="EXPIRED">Expired</option>
-                <option value="URGENT">Within 15 Days</option>
-                <option value="UPCOMING">Within 30 Days</option>
-                <option value="FUTURE">Within 90 Days</option>
+                <option value="1D">1 Day Left</option>
+                <option value="7D">7 Days Left</option>
+                <option value="15D">15 Days Left</option>
+                <option value="30D">30 Days Left</option>
+                <option value="60D">60 Days Left</option>
+                <option value="90D">90 Days Left</option>
               </select>
             </div>
           </div>
@@ -1356,6 +1368,29 @@
       <div style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: 0.8rem;">
         <button class="btn-back" onclick="docFlowApp.closeStoreDetailModal()">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BCWA CSV IMPORT -->
+  <div id="bcwaCsvImportModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 550px; border-color: var(--accent-blue);">
+      <div class="modal-header">
+        <h3 style="margin: 0;"><i class="fa-solid fa-file-import" style="color: var(--accent-blue);"></i> Bulk Import Medical Stores (CSV)</h3>
+        <button class="btn-close" onclick="docFlowApp.closeCsvImportModal()">&times;</button>
+      </div>
+      <form onsubmit="docFlowApp.handleBcwaCsvImport(event)" style="margin-top: 1rem;">
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Select a CSV file containing headers: <code>Store Name, Owner Name, Business Type, Owner Contact, Owner Email, Address, DL 20B, DL 21B, DL Expiry, FSSAI Number, FSSAI Expiry, Rent Expiry</code>.
+        </p>
+        <div class="form-group" style="margin-bottom: 1.2rem;">
+          <label style="font-size: 0.85rem; font-weight: 600;">Choose CSV File</label>
+          <input type="file" id="bcwaCsvFileInput" accept=".csv, .txt" required style="font-size: 0.85rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 8px;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
+          <button type="button" class="btn-back" onclick="docFlowApp.closeCsvImportModal()">Cancel</button>
+          <button type="submit" class="btn-primary" style="background: var(--accent-blue);"><i class="fa-solid fa-upload"></i> Import Stores</button>
+        </div>
+      </form>
     </div>
   </div>
 
