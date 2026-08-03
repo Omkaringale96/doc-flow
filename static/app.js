@@ -26,7 +26,15 @@ class DocFlowApp {
 
   // --- MEMBER AUTHENTICATION ENGINE ---
   checkAuthStatus() {
-    this.logoutSilently();
+    const token = localStorage.getItem("docflow_token");
+    const username = localStorage.getItem("docflow_username");
+    if (token && username) {
+      this.authToken = token;
+      this.currentUser = username;
+      this.showAuthenticatedApp();
+    } else {
+      this.logoutSilently();
+    }
   }
 
   logoutSilently() {
@@ -86,6 +94,8 @@ class DocFlowApp {
       document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
       if (addMemberNavBtn) addMemberNavBtn.style.display = "none";
     }
+
+    this.loadBcwaStores();
   }
 
   showLoginModal() {
