@@ -2360,7 +2360,7 @@ class ApiBcwaStoresHandler(BaseHandler):
         try:
             raw_body = self.request.body.decode("utf-8")
             data = json.loads(raw_body)
-            store_id = data.get("id") or f"store_{int(time.time()*1000)}"
+            store_id = data.get("id") or f"store_{int(datetime.now().timestamp()*1000)}"
             data["id"] = store_id
             data["updated_at"] = datetime.now().isoformat()
 
@@ -2424,6 +2424,8 @@ def make_app():
         (r"/api/workflows", ApiWorkflowsHandler),
         (r"/api/submissions", ApiSubmissionsHistoryHandler),
         (r"/api/bcwa/stores", ApiBcwaStoresHandler),
+        (r"/api/bcwa/add_store", ApiBcwaStoresHandler),
+        (r"/api/bcwa/add_pharmacist", ApiBcwaStoresHandler),
         (r"/api/extract_document_data", ApiExtractDocumentDataHandler),
         (r"/api/preview_rotation", ApiPreviewRotationHandler),
         (r"/api/live_render", ApiLiveRenderHandler),

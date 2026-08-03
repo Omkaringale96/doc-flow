@@ -2538,6 +2538,56 @@ class DocFlowApp {
     this.showToast("⚡ BCWA Automated Expiry Notification Service Active!");
     this.switchBcwaSubTab("reminders");
   }
+
+  openAddPharmacistModal() {
+    const selectEl = document.getElementById("bcwaPharmStoreSelect");
+    if (selectEl && this.bcwaStores) {
+      selectEl.innerHTML = `<option value="">-- Choose Medical Store --</option>` +
+        this.bcwaStores.map(s => `<option value="${s.id}">${s.store_name} (Owner: ${s.owner_name})</option>`).join("");
+    }
+    document.getElementById("bcwaPharmacistModal").style.display = "flex";
+  }
+
+  closeAddPharmacistModal() {
+    document.getElementById("bcwaPharmacistModal").style.display = "none";
+  }
+
+  async handleBcwaPharmacistSubmit(event) {
+    event.preventDefault();
+    const storeId = document.getElementById("bcwaPharmStoreSelect").value;
+    if (!storeId || !this.bcwaStores) return;
+
+    const s = this.bcwaStores.find(item => item.id === storeId);
+    if (!s) return;
+
+    s.pharmacist_name = document.getElementById("bcwaPharmNameInput").value.trim();
+    s.pharmacist_mobile = document.getElementById("bcwaPharmMobileInput").value.trim();
+    s.pharmacist_email = document.getElementById("bcwaPharmEmailInput").value.trim();
+    s.mspc_reg_no = document.getElementById("bcwaPharmRegNoInput").value.trim();
+    s.ppp_number = document.getElementById("bcwaPharmPppNoInput").value.trim();
+    s.ppp_expiry = document.getElementById("bcwaPharmPppExpiryInput").value;
+    s.reg_expiry = document.getElementById("bcwaPharmRegExpiryInput").value;
+    s.joining_date = document.getElementById("bcwaPharmJoiningInput").value;
+    s.leaving_date = document.getElementById("bcwaPharmLeavingInput").value;
+
+    try {
+      const res = await fetch("/api/bcwa/add_store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(s)
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        this.showToast(`Pharmacist '${s.pharmacist_name}' assigned to '${s.store_name}'!`);
+        this.closeAddPharmacistModal();
+        this.loadBcwaStores();
+      } else {
+        alert(data.message || "Failed to assign pharmacist.");
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  }
 }
 
 const docFlowApp = new DocFlowApp();

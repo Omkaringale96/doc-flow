@@ -648,6 +648,9 @@
           <button class="btn-primary" style="background: var(--accent-green);" onclick="docFlowApp.openAddBcwaStoreModal()">
             <i class="fa-solid fa-plus-circle"></i> Register Medical Store
           </button>
+          <button class="btn-primary" style="background: var(--accent-purple);" onclick="docFlowApp.openAddPharmacistModal()">
+            <i class="fa-solid fa-user-doctor"></i> Add Pharmacist
+          </button>
           <button class="btn-back" style="border-color: #4ade80; color: #4ade80;" onclick="docFlowApp.triggerBulkReminders()">
             <i class="fa-solid fa-bell"></i> Bulk Expiry Alerts
           </button>
@@ -1259,6 +1262,79 @@
         <div style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: 0.8rem;">
           <button type="button" class="btn-back" onclick="docFlowApp.closeBcwaStoreModal()">Cancel</button>
           <button type="submit" class="btn-primary" style="background: var(--accent-green);"><i class="fa-solid fa-floppy-disk"></i> Save Medical Store Profile</button>
+        </div>
+      </form>
+    </div>
+  <!-- MODAL: BCWA ADD / UPDATE PHARMACIST -->
+  <div id="bcwaPharmacistModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 580px; border-color: var(--accent-purple);">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-doctor" style="color: var(--accent-purple);"></i> Add / Assign Pharmacist to Medical Store</h3>
+        <button class="btn-close" onclick="docFlowApp.closeAddPharmacistModal()">&times;</button>
+      </div>
+
+      <form onsubmit="docFlowApp.handleBcwaPharmacistSubmit(event)" style="margin-top: 1rem;">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="font-size: 0.82rem; font-weight: 600;">Select Target Medical Store *</label>
+          <select id="bcwaPharmStoreSelect" required style="font-size: 0.9rem; font-weight: 600;">
+            <option value="">-- Choose Medical Store --</option>
+          </select>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="font-size: 0.8rem;">Pharmacist Full Name *</label>
+            <input type="text" id="bcwaPharmNameInput" required placeholder="e.g. Kartik Bhosale" style="font-size: 0.85rem;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem;">Mobile Number *</label>
+              <input type="text" id="bcwaPharmMobileInput" required placeholder="10-digit mobile" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem;">Email Address</label>
+              <input type="email" id="bcwaPharmEmailInput" placeholder="pharmacist@gmail.com" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem;">MSPC Reg Number *</label>
+              <input type="text" id="bcwaPharmRegNoInput" required placeholder="e.g. 189423" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem;">PPP Number</label>
+              <input type="text" id="bcwaPharmPppNoInput" placeholder="e.g. PPP-401501-A" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.78rem;">PPP Expiry Date</label>
+              <input type="date" id="bcwaPharmPppExpiryInput" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.78rem;">MSPC Reg Expiry Date</label>
+              <input type="date" id="bcwaPharmRegExpiryInput" style="font-size: 0.82rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.78rem;">Joining Date</label>
+              <input type="date" id="bcwaPharmJoiningInput" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.78rem;">Leaving Date (Optional)</label>
+              <input type="date" id="bcwaPharmLeavingInput" style="font-size: 0.82rem;">
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem;">
+          <button type="button" class="btn-back" onclick="docFlowApp.closeAddPharmacistModal()">Cancel</button>
+          <button type="submit" class="btn-primary" style="background: var(--accent-purple);"><i class="fa-solid fa-user-check"></i> Assign Pharmacist</button>
         </div>
       </form>
     </div>
