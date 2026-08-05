@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocFlow Pro - Government Document Preparation Portal</title>
-  <link rel="stylesheet" href="/static/styles.css?v=2.5.6">
+  <link rel="stylesheet" href="/static/styles.css?v=2.6.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -839,16 +839,6 @@
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
           DocFlow Pro Portal is strictly restricted to authorized members only.
         </p>
-        
-        <!-- Quick Credential Auto-Fill Pills -->
-        <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: center;">
-          <button type="button" class="btn-back" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); border-color: var(--accent-blue);" onclick="document.getElementById('loginUsername').value='Datta'; document.getElementById('loginPassword').value='555';">
-            🔑 Datta (Admin)
-          </button>
-          <button type="button" class="btn-back" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: rgba(168, 85, 247, 0.15); border-color: var(--accent-purple);" onclick="document.getElementById('loginUsername').value='Vinayak'; document.getElementById('loginPassword').value='000';">
-            🔑 Vinayak (Member)
-          </button>
-        </div>
       </div>
 
       <div id="loginErrorMsg" style="display: none; padding: 0.6rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; color: #ef4444; font-size: 0.82rem; margin-bottom: 1rem;"></div>
@@ -1135,294 +1125,282 @@
       </div>
     </div>
   <!-- MODAL: BCWA REGISTER / EDIT MEDICAL STORE -->
-  <!-- MODAL: BCWA MEDICAL STORE REGISTRATION WIZARD -->
+  <!-- MODAL: BCWA REGISTER MEDICAL STORE 7-STEP WIZARD -->
   <div id="bcwaStoreModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card" style="max-width: 960px; border-color: var(--accent-green);">
-      <div class="modal-header" style="border-bottom: 1px solid var(--border-glass); padding-bottom: 0.8rem;">
+    <div class="modal-card" style="max-width: 860px; border-color: var(--accent-green);">
+      <div class="modal-header">
         <div>
-          <h3 style="margin: 0; display: flex; align-items: center; gap: 0.6rem;">
-            <i class="fa-solid fa-hospital" style="color: var(--accent-green);"></i> BCWA Medical Store Registration Wizard
-          </h3>
-          <span style="font-size: 0.8rem; color: var(--text-muted);">Step-by-Step Pharmacy Compliance & Licensing Setup</span>
+          <h3 style="margin: 0;"><i class="fa-solid fa-hospital" style="color: var(--accent-green);"></i> Register Medical Store & Compliance Vault</h3>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Step-by-step master pharmacy onboarding wizard</span>
         </div>
         <button class="btn-close" onclick="docFlowApp.closeBcwaStoreModal()">&times;</button>
       </div>
 
-      <!-- Wizard Progress Bar Header -->
-      <div style="display: flex; gap: 0.3rem; margin: 1rem 0; background: rgba(255,255,255,0.03); padding: 0.6rem; border-radius: 10px; border: 1px solid var(--border-glass); overflow-x: auto;">
-        <button type="button" class="wiz-step-btn active" id="bcwaWizIndicator1" onclick="docFlowApp.goToBcwaWizardStep(1)">1. Store Info</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator2" onclick="docFlowApp.goToBcwaWizardStep(2)">2. Owner</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator3" onclick="docFlowApp.goToBcwaWizardStep(3)">3. Drug Lic</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator4" onclick="docFlowApp.goToBcwaWizardStep(4)">4. Food Lic</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator5" onclick="docFlowApp.goToBcwaWizardStep(5)">5. Pharmacists</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator6" onclick="docFlowApp.goToBcwaWizardStep(6)">6. Docs & Rules</button>
-        <button type="button" class="wiz-step-btn" id="bcwaWizIndicator7" onclick="docFlowApp.goToBcwaWizardStep(7)">7. Preview</button>
+      <!-- Stepper Navigation Bar -->
+      <div id="bcwaWizardStepper" style="display: flex; gap: 0.4rem; overflow-x: auto; margin-top: 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-glass);">
+        <button type="button" class="nav-tab active" id="wizardStepBtn_1" onclick="docFlowApp.goToWizardStep(1)">1. Store Info</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_2" onclick="docFlowApp.goToWizardStep(2)">2. Owner Details</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_3" onclick="docFlowApp.goToWizardStep(3)">3. Drug License</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_4" onclick="docFlowApp.goToWizardStep(4)">4. Food License</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_5" onclick="docFlowApp.goToWizardStep(5)">5. Pharmacists</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_6" onclick="docFlowApp.goToWizardStep(6)">6. Documents & Schedule</button>
+        <button type="button" class="nav-tab" id="wizardStepBtn_7" onclick="docFlowApp.goToWizardStep(7)">7. Preview & Confirm</button>
       </div>
 
-      <form onsubmit="docFlowApp.handleBcwaStoreSubmit(event)">
+      <form onsubmit="docFlowApp.handleBcwaStoreSubmit(event)" style="margin-top: 1rem;">
         <input type="hidden" id="bcwaStoreId" value="">
 
-        <!-- STEP 1: Medical Store Information -->
-        <div id="bcwaWizStep1" class="wiz-step-panel">
-          <h4 style="color: var(--accent-green); margin: 0 0 1rem 0;"><i class="fa-solid fa-store"></i> Section 1: Medical Store Information</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <!-- Basic Info -->
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">Basic Information</h5>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Medical Store Name *</label>
-                <input type="text" id="bcwaStoreName" required placeholder="e.g. Apollo Pharmacy Boisar" style="font-size: 0.85rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Business Type *</label>
-                <select id="bcwaBusinessType" style="font-size: 0.85rem;">
-                  <option value="Proprietorship">Proprietorship</option>
-                  <option value="Partnership">Partnership</option>
-                  <option value="LLP">LLP</option>
-                  <option value="Pvt Ltd">Pvt Ltd</option>
-                </select>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">GST Number</label>
-                  <input type="text" id="bcwaGstNumber" placeholder="27AAAAA0000A1Z5" style="font-size: 0.8rem;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Est. Year</label>
-                  <input type="number" id="bcwaEstYear" placeholder="2020" style="font-size: 0.8rem;">
-                </div>
-              </div>
+        <!-- STEP 1: Medical Store Info -->
+        <div id="bcwaWizardStep_1" class="wizard-step-panel">
+          <h4 style="color: var(--accent-green); margin-bottom: 1rem;"><i class="fa-solid fa-store"></i> Step 1: Medical Store Basic Information</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Medical Store Name *</label>
+              <input type="text" id="bcwaStoreName" required placeholder="e.g. Shree Chemist Boisar" style="font-size: 0.85rem;">
             </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Business Type *</label>
+              <select id="bcwaBusinessType" style="font-size: 0.85rem;">
+                <option value="Proprietorship">Proprietorship</option>
+                <option value="Partnership">Partnership</option>
+                <option value="Pvt Ltd">Pvt Ltd</option>
+                <option value="LLP">LLP</option>
+              </select>
+            </div>
+          </div>
 
-            <!-- Contact & Address -->
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">Contact & Address</h5>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Mobile Number *</label>
-                  <input type="text" id="bcwaContactNumber" required placeholder="10 digits" style="font-size: 0.8rem;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Alt Mobile</label>
-                  <input type="text" id="bcwaAltMobile" placeholder="10 digits" style="font-size: 0.8rem;">
-                </div>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Store Email</label>
-                  <input type="email" id="bcwaEmail" placeholder="store@gmail.com" style="font-size: 0.8rem;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Website</label>
-                  <input type="text" id="bcwaWebsite" placeholder="https://..." style="font-size: 0.8rem;">
-                </div>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.75rem;">Full Shop Address</label>
-                <input type="text" id="bcwaAddress" placeholder="Shop No. 1, Station Road, Boisar, Palghar - 401501" style="font-size: 0.8rem;">
-              </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Store Contact Phone *</label>
+              <input type="text" id="bcwaContactNumber" required placeholder="10-digit mobile" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Store Official Email</label>
+              <input type="email" id="bcwaEmail" placeholder="store@gmail.com" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.8rem;">
+            <label style="font-size: 0.8rem;">Address Line / Landmark *</label>
+            <input type="text" id="bcwaAddress" required placeholder="Shop No, Building, Street / Landmark" style="font-size: 0.85rem;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">City / Village</label>
+              <input type="text" id="bcwaCity" value="Boisar" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">District</label>
+              <input type="text" id="bcwaDistrict" value="Palghar" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">PIN Code</label>
+              <input type="text" id="bcwaPin" value="401501" style="font-size: 0.82rem;">
             </div>
           </div>
         </div>
 
-        <!-- STEP 2: Owner Details -->
-        <div id="bcwaWizStep2" class="wiz-step-panel" style="display: none;">
-          <h4 style="color: var(--accent-blue); margin: 0 0 1rem 0;"><i class="fa-solid fa-user-tie"></i> Section 2: Owner Details & KYC Uploads</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">Owner Personal Info</h5>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.78rem;">Owner Full Name *</label>
-                <input type="text" id="bcwaOwnerName" required placeholder="e.g. Shri Rajesh Patil" style="font-size: 0.85rem;">
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Owner Mobile *</label>
-                  <input type="text" id="bcwaOwnerMobile" required placeholder="10 digits" style="font-size: 0.8rem;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">WhatsApp Number</label>
-                  <input type="text" id="bcwaOwnerWhatsapp" placeholder="10 digits" style="font-size: 0.8rem;">
-                </div>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">Aadhaar Number</label>
-                  <input type="text" id="bcwaOwnerAadhaar" placeholder="12 digits" style="font-size: 0.8rem;">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label style="font-size: 0.75rem;">PAN Number</label>
-                  <input type="text" id="bcwaOwnerPan" placeholder="10 characters" style="font-size: 0.8rem;">
-                </div>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.75rem;">Residential Address</label>
-                <input type="text" id="bcwaOwnerResAddress" placeholder="Flat No., Area, City" style="font-size: 0.8rem;">
-              </div>
+        <!-- STEP 2: Owner Details & KYC -->
+        <div id="bcwaWizardStep_2" class="wizard-step-panel" style="display: none;">
+          <h4 style="color: var(--accent-blue); margin-bottom: 1rem;"><i class="fa-solid fa-user-tie"></i> Step 2: Owner Details & KYC Credentials</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Owner Full Name *</label>
+              <input type="text" id="bcwaOwnerName" required placeholder="e.g. Omkar Ingale" style="font-size: 0.85rem;">
             </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Owner Mobile Number *</label>
+              <input type="text" id="bcwaOwnerMobile" placeholder="10-digit mobile" style="font-size: 0.85rem;">
+            </div>
+          </div>
 
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">KYC Document Uploads</h5>
-              <div class="form-group" style="margin-bottom: 0.8rem;">
-                <label style="font-size: 0.75rem;">Owner Passport Photo</label>
-                <input type="file" id="bcwaUploadOwnerPhoto" accept="image/*" style="font-size: 0.8rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0.8rem;">
-                <label style="font-size: 0.75rem;">Aadhaar Card PDF / Image</label>
-                <input type="file" id="bcwaUploadOwnerAadhaar" accept=".pdf,image/*" style="font-size: 0.8rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.75rem;">PAN Card PDF / Image</label>
-                <input type="file" id="bcwaUploadOwnerPan" accept=".pdf,image/*" style="font-size: 0.8rem;">
-              </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">WhatsApp Number for Expiry Alerts</label>
+              <input type="text" id="bcwaOwnerWhatsapp" placeholder="10-digit WhatsApp number" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">Owner Personal Email</label>
+              <input type="email" id="bcwaOwnerEmail" placeholder="owner.personal@gmail.com" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Aadhaar Number (12 digits)</label>
+              <input type="text" id="bcwaOwnerAadhaar" placeholder="12-digit Aadhaar No" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">PAN Number (10 chars)</label>
+              <input type="text" id="bcwaOwnerPan" placeholder="ABCDE1234F" style="font-size: 0.82rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Owner Passport Photo</label>
+              <input type="file" id="bcwaFileOwnerPhoto" accept="image/*" style="font-size: 0.75rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Aadhaar Card Upload</label>
+              <input type="file" id="bcwaFileOwnerAadhaar" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">PAN Card Upload</label>
+              <input type="file" id="bcwaFileOwnerPan" accept="image/*,.pdf" style="font-size: 0.75rem;">
             </div>
           </div>
         </div>
 
-        <!-- STEP 3: Drug License -->
-        <div id="bcwaWizStep3" class="wiz-step-panel" style="display: none;">
-          <h4 style="color: #f59e0b; margin: 0 0 1rem 0;"><i class="fa-solid fa-capsules"></i> Section 3: Drug License Information (Form 20B / 21B)</h4>
-          <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.8rem;">Drug License 20B Number *</label>
-                <input type="text" id="bcwaDl20b" required placeholder="MH-TZ4-20B-XXXXX" style="font-size: 0.85rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.8rem;">Drug License 21B Number *</label>
-                <input type="text" id="bcwaDl21b" required placeholder="MH-TZ4-21B-XXXXX" style="font-size: 0.85rem;">
-              </div>
+        <!-- STEP 3: Drug License (DL 20B/21B) -->
+        <div id="bcwaWizardStep_3" class="wizard-step-panel" style="display: none;">
+          <h4 style="color: #f59e0b; margin-bottom: 1rem;"><i class="fa-solid fa-capsules"></i> Step 3: Drug License Information (20B / 21B)</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">20B License Number</label>
+              <input type="text" id="bcwaDl20b" placeholder="MH-20B-401501-001" style="font-size: 0.85rem;">
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">Issue Date</label>
-                <input type="date" id="bcwaDlIssueDate" style="font-size: 0.82rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">Expiry Date *</label>
-                <input type="date" id="bcwaDlExpiry" required style="font-size: 0.82rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">Licensing Authority</label>
-                <input type="text" id="bcwaDlAuthority" placeholder="FDA Maharashtra, Thane" style="font-size: 0.82rem;">
-              </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">21B License Number</label>
+              <input type="text" id="bcwaDl21b" placeholder="MH-21B-401501-001" style="font-size: 0.85rem;">
             </div>
+          </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">Upload Drug License PDF</label>
-                <input type="file" id="bcwaUploadDlPdf" accept=".pdf,image/*" style="font-size: 0.8rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">Remarks / Conditions</label>
-                <input type="text" id="bcwaDlRemarks" placeholder="Cold Storage required, etc." style="font-size: 0.8rem;">
-              </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">DL Issue Date</label>
+              <input type="date" id="bcwaDlIssueDate" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">DL Expiry Date *</label>
+              <input type="date" id="bcwaDlExpiry" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Licensing Authority</label>
+              <input type="text" id="bcwaDlAuthority" value="FDA Maharashtra (Palghar)" style="font-size: 0.82rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Drug License Copy Upload</label>
+              <input type="file" id="bcwaFileDl" accept="image/*,.pdf" style="font-size: 0.8rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">License Remarks / Notes</label>
+              <input type="text" id="bcwaDlRemarks" placeholder="Retention / Renewal notes" style="font-size: 0.82rem;">
             </div>
           </div>
         </div>
 
-        <!-- STEP 4: Food License -->
-        <div id="bcwaWizStep4" class="wiz-step-panel" style="display: none;">
-          <h4 style="color: #3b82f6; margin: 0 0 1rem 0;"><i class="fa-solid fa-utensils"></i> Section 4: Food License (FSSAI)</h4>
-          <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-            <div class="form-group" style="margin-bottom: 0.8rem;">
-              <label style="font-size: 0.82rem;">FSSAI Registration Number *</label>
-              <input type="text" id="bcwaFssaiNumber" required placeholder="14-digit FSSAI Number" style="font-size: 0.88rem;">
+        <!-- STEP 4: Food License (FSSAI) -->
+        <div id="bcwaWizardStep_4" class="wizard-step-panel" style="display: none;">
+          <h4 style="color: #3b82f6; margin-bottom: 1rem;"><i class="fa-solid fa-utensils"></i> Step 4: Food License Information (FSSAI)</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">FSSAI Registration / License Number</label>
+              <input type="text" id="bcwaFssaiNumber" placeholder="14-digit FSSAI No" style="font-size: 0.85rem;">
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">FSSAI Issue Date</label>
-                <input type="date" id="bcwaFssaiIssueDate" style="font-size: 0.82rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.78rem;">FSSAI Expiry Date *</label>
-                <input type="date" id="bcwaFssaiExpiry" required style="font-size: 0.82rem;">
-              </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">FSSAI Issue Date</label>
+              <input type="date" id="bcwaFssaiIssueDate" style="font-size: 0.85rem;">
             </div>
+          </div>
 
-            <div class="form-group" style="margin-bottom: 0;">
-              <label style="font-size: 0.78rem;">Upload Food License Certificate (PDF / Image)</label>
-              <input type="file" id="bcwaUploadFssaiPdf" accept=".pdf,image/*" style="font-size: 0.8rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">FSSAI Expiry Date</label>
+              <input type="date" id="bcwaFssaiExpiry" style="font-size: 0.85rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.8rem;">FSSAI Certificate Upload</label>
+              <input type="file" id="bcwaFileFssai" accept="image/*,.pdf" style="font-size: 0.85rem;">
             </div>
           </div>
         </div>
 
         <!-- STEP 5: Pharmacists Assignment -->
-        <div id="bcwaWizStep5" class="wiz-step-panel" style="display: none;">
+        <div id="bcwaWizardStep_5" class="wizard-step-panel" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h4 style="color: var(--accent-purple); margin: 0;"><i class="fa-solid fa-user-doctor"></i> Section 5: Pharmacist Assignment</h4>
-            <button type="button" class="btn-primary" style="background: var(--accent-purple); font-size: 0.8rem;" onclick="docFlowApp.addBcwaWizPharmacistCard()">
+            <h4 style="color: var(--accent-purple); margin: 0;"><i class="fa-solid fa-user-doctor"></i> Step 5: Pharmacist Assignment</h4>
+            <button type="button" class="btn-primary" style="background: var(--accent-purple); font-size: 0.78rem; padding: 0.3rem 0.7rem;" onclick="docFlowApp.addWizardPharmacistRow()">
               <i class="fa-solid fa-plus"></i> Add Another Pharmacist
             </button>
           </div>
 
-          <div id="bcwaWizPharmacistListContainer">
-            <!-- Dynamically populated pharmacist cards -->
+          <div id="bcwaWizardPharmacistsContainer">
+            <!-- Dynamic Pharmacist rows rendered by app.js -->
           </div>
         </div>
 
         <!-- STEP 6: Store Documents & Compliance Settings -->
-        <div id="bcwaWizStep6" class="wiz-step-panel" style="display: none;">
-          <h4 style="color: #c084fc; margin: 0 0 1rem 0;"><i class="fa-solid fa-folder-open"></i> Section 6: Store Documents & Expiry Reminders</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <!-- Upload Documents -->
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">Store Compliance Documents</h5>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.75rem;">Rent Agreement PDF</label>
-                <input type="file" id="bcwaUploadRent" accept=".pdf,image/*" style="font-size: 0.78rem;">
-                <input type="date" id="bcwaRentExpiry" placeholder="Rent Expiry" style="font-size: 0.78rem; margin-top: 0.3rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.75rem;">Light Bill / Electricity Proof</label>
-                <input type="file" id="bcwaUploadLightBill" accept=".pdf,image/*" style="font-size: 0.78rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0.6rem;">
-                <label style="font-size: 0.75rem;">Cold Storage Certificate</label>
-                <input type="file" id="bcwaUploadColdStorage" accept=".pdf,image/*" style="font-size: 0.78rem;">
-              </div>
+        <div id="bcwaWizardStep_6" class="wizard-step-panel" style="display: none;">
+          <h4 style="color: #c084fc; margin-bottom: 1rem;"><i class="fa-solid fa-folder-open"></i> Step 6: Store Documents Vault & 7-Tier Expiry Reminders</h4>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Rent Agreement Expiry</label>
+              <input type="date" id="bcwaRentExpiry" style="font-size: 0.78rem;">
             </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Rent Agreement Copy</label>
+              <input type="file" id="bcwaFileRent" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Light Bill Upload</label>
+              <input type="file" id="bcwaFileLight" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+          </div>
 
-            <!-- Reminder Settings & Notes -->
-            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <h5 style="margin: 0 0 0.8rem 0; color: var(--text-bright);">Reminder Schedules & Internal Notes</h5>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
-                <label style="font-size: 0.78rem; color: var(--text-bright);"><input type="checkbox" id="bcwaRemindDl" checked> Drug License</label>
-                <label style="font-size: 0.78rem; color: var(--text-bright);"><input type="checkbox" id="bcwaRemindFood" checked> Food License</label>
-                <label style="font-size: 0.78rem; color: var(--text-bright);"><input type="checkbox" id="bcwaRemindPpp" checked> PPP Expiry</label>
-                <label style="font-size: 0.78rem; color: var(--text-bright);"><input type="checkbox" id="bcwaRemindRent" checked> Rent Expiry</label>
-              </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Shop Tax Receipt</label>
+              <input type="file" id="bcwaFileTax" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Form / Namuna 8</label>
+              <input type="file" id="bcwaFileNamuna8" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.72rem;">Cold Storage Cert</label>
+              <input type="file" id="bcwaFileColdStorage" accept="image/*,.pdf" style="font-size: 0.75rem;">
+            </div>
+          </div>
 
-              <div class="form-group" style="margin-bottom: 0.8rem;">
-                <label style="font-size: 0.75rem;">Internal Notes & Compliance Remarks</label>
-                <textarea id="bcwaStoreNotes" rows="3" placeholder="Enter special remarks or inspection notes..." style="font-size: 0.8rem; width: 100%; padding: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-bright);"></textarea>
-              </div>
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+            <h5 style="color: var(--accent-green); margin: 0 0 0.5rem 0; font-size: 0.85rem;"><i class="fa-solid fa-bell"></i> 7-Tier Expiry Reminder Schedules</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; font-size: 0.78rem; color: var(--text-bright);">
+              <label><input type="checkbox" id="bcwaSched90" checked> 90 Days Before</label>
+              <label><input type="checkbox" id="bcwaSched60" checked> 60 Days Before</label>
+              <label><input type="checkbox" id="bcwaSched30" checked> 30 Days Before</label>
+              <label><input type="checkbox" id="bcwaSched15" checked> 15 Days Before</label>
+              <label><input type="checkbox" id="bcwaSched7" checked> 7 Days Before</label>
+              <label><input type="checkbox" id="bcwaSched1" checked> 1 Day Before</label>
             </div>
           </div>
         </div>
 
-        <!-- STEP 7: Preview & Final Confirmation -->
-        <div id="bcwaWizStep7" class="wiz-step-panel" style="display: none;">
-          <h4 style="color: #4ade80; margin: 0 0 1rem 0;"><i class="fa-solid fa-clipboard-check"></i> Section 7: Registration Summary Preview</h4>
-          <div id="bcwaWizPreviewContainer" style="max-height: 55vh; overflow-y: auto;">
-            <!-- Summary cards dynamically rendered -->
+        <!-- STEP 7: Preview & Final Confirmation Summary -->
+        <div id="bcwaWizardStep_7" class="wizard-step-panel" style="display: none;">
+          <h4 style="color: var(--accent-green); margin-bottom: 1rem;"><i class="fa-solid fa-clipboard-check"></i> Step 7: Preview & Final Confirmation Summary</h4>
+          <div id="bcwaWizardPreviewContainer" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--accent-green); border-radius: 10px; padding: 1rem; max-height: 50vh; overflow-y: auto;">
+            <!-- Summary grid rendered dynamically by app.js -->
           </div>
         </div>
 
         <!-- Wizard Navigation Footer Buttons -->
-        <div style="margin-top: 1.2rem; border-top: 1px solid var(--border-glass); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-          <button type="button" class="btn-back" id="bcwaWizPrevBtn" onclick="docFlowApp.prevBcwaWizardStep()" style="display: none;">
-            <i class="fa-solid fa-arrow-left"></i> Previous Step
+        <div style="margin-top: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn-back" id="btnWizardPrev" onclick="docFlowApp.prevWizardStep()" style="display: none;">
+            <i class="fa-solid fa-arrow-left"></i> Previous
           </button>
-          <div style="display: flex; gap: 0.8rem; margin-left: auto;">
+          <div style="display: flex; gap: 0.6rem; margin-left: auto;">
             <button type="button" class="btn-back" onclick="docFlowApp.closeBcwaStoreModal()">Cancel</button>
-            <button type="button" class="btn-primary" id="bcwaWizNextBtn" style="background: var(--accent-blue);" onclick="docFlowApp.nextBcwaWizardStep()">
+            <button type="button" class="btn-primary" id="btnWizardNext" onclick="docFlowApp.nextWizardStep()" style="background: var(--accent-blue);">
               Next Step <i class="fa-solid fa-arrow-right"></i>
             </button>
-            <button type="submit" class="btn-primary" id="bcwaWizSubmitBtn" style="background: var(--accent-green); display: none;">
-              <i class="fa-solid fa-floppy-disk"></i> Save Medical Store
+            <button type="submit" class="btn-primary" id="btnWizardSubmit" style="background: var(--accent-green); display: none;">
+              <i class="fa-solid fa-floppy-disk"></i> Save Medical Store Profile
             </button>
           </div>
         </div>
@@ -1546,6 +1524,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=2.5.6"></script>
+  <script src="/static/app.js?v=2.6.0"></script>
 </body>
 </html>

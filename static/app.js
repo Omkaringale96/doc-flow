@@ -46,23 +46,13 @@ class DocFlowApp {
   }
 
   async handleLogin(event) {
-    if (event) event.preventDefault();
-    const usernameInput = (document.getElementById("loginUsername")?.value || "").trim();
-    const passwordInput = (document.getElementById("loginPassword")?.value || "").trim();
+    event.preventDefault();
+    const usernameInput = document.getElementById("loginUsername").value.trim();
+    const passwordInput = document.getElementById("loginPassword").value.trim();
     const errorBox = document.getElementById("loginErrorMsg");
 
-    if (errorBox) {
-      errorBox.style.display = "none";
-      errorBox.innerText = "";
-    }
-
-    if (!usernameInput || !passwordInput) {
-      if (errorBox) {
-        errorBox.style.display = "block";
-        errorBox.innerText = "Please enter both Authorized Username and Password!";
-      }
-      return;
-    }
+    errorBox.style.display = "none";
+    errorBox.innerText = "";
 
     try {
       const res = await fetch("/api/login", {
@@ -82,44 +72,30 @@ class DocFlowApp {
         this.showAuthenticatedApp();
         this.showToast(`Welcome back, Officer ${data.username}! Access Granted.`);
       } else {
-        if (errorBox) {
-          errorBox.style.display = "block";
-          errorBox.innerText = data.message || "Invalid Authorized Username or Password!";
-        }
+        errorBox.style.display = "block";
+        errorBox.innerText = data.message || "Invalid Authorized Username or Password!";
       }
     } catch (e) {
-      if (errorBox) {
-        errorBox.style.display = "block";
-        errorBox.innerText = "Network or Server authentication error: " + e.message;
-      }
+      errorBox.style.display = "block";
+      errorBox.innerText = "Network or Server authentication error: " + e.message;
     }
   }
 
   showAuthenticatedApp() {
-    const loginModal = document.getElementById("loginModalContainer");
-    const mainContent = document.getElementById("mainAppContent");
-    const userPill = document.getElementById("userPillContainer");
-
-    if (loginModal) loginModal.style.display = "none";
-    if (mainContent) mainContent.style.display = "block";
-    if (userPill) userPill.style.display = "flex";
+    document.getElementById("loginModalContainer").style.display = "none";
+    document.getElementById("mainAppContent").style.display = "block";
+    document.getElementById("userPillContainer").style.display = "flex";
     
     const addMemberNavBtn = document.getElementById("addMemberNavBtn");
-    const loggedInUserLabel = document.getElementById("loggedInUserLabel");
-
-    const isDatta = (this.currentUser || "").toLowerCase() === "datta";
-    if (loggedInUserLabel) {
-      loggedInUserLabel.innerText = isDatta ? `Datta (Administrator)` : `${this.currentUser} (Authorized Member)`;
-    }
-    if (addMemberNavBtn) {
-      addMemberNavBtn.style.display = isDatta ? "inline-flex" : "none";
+    if (this.currentUser === "Datta") {
+      document.getElementById("loggedInUserLabel").innerText = `Datta (Administrator)`;
+      if (addMemberNavBtn) addMemberNavBtn.style.display = "inline-flex";
+    } else {
+      document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
+      if (addMemberNavBtn) addMemberNavBtn.style.display = "none";
     }
 
-    try {
-      this.loadBcwaStores();
-    } catch (e) {
-      console.error("Error loading BCWA stores after login:", e);
-    }
+    this.loadBcwaStores();
   }
 
   showLoginModal() {
@@ -2146,6 +2122,23 @@ class DocFlowApp {
   // ----------------------------------------------------------------------
   // BCWA (Boisar Welfare Chemist Association) Platform Logic
   // ----------------------------------------------------------------------
+  async loadBcwaStores() {
+    try {
+      const res = await fetch("/api/bcwa/stores");
+      const data = await res.json();
+      if (data.status === "success" && data.stores) {
+        this.bcwaStores = data.stores;
+        this.renderBcwaDashboard();
+        this.renderBcwaStoresTable(this.bcwaStores);
+        this.renderBcwaReminders();
+        this.renderBcwaCalendar();
+        this.renderBcwaDirectory(this.bcwaStores);
+      }
+    } catch (e) {
+      console.error("Failed to load BCWA stores:", e);
+    }
+  }
+
   switchBcwaSubTab(subTab) {
     this.activeBcwaSubTab = subTab;
     const tabs = ["dashboard", "stores", "reminders", "calendar", "directory"];
@@ -2706,7 +2699,7 @@ class DocFlowApp {
       return;
     }
     const filtered = this.bcwaStores.filter(s =>
-      (s.store_name || "").toLowerCase().includes(q) ||
+(s.store_name || "").toLowerCase().includes(q) ||
       (s.owner_name || "").toLowerCase().includes(q) ||
       (s.contact_number || "").includes(q) ||
       (s.pharmacists || []).some(p => (p.pharmacist_name || "").toLowerCase().includes(q) || (p.pharmacist_mobile || "").includes(q))
@@ -2714,373 +2707,270 @@ class DocFlowApp {
     this.renderBcwaDirectory(filtered);
   }
 
-  // --- MEDICAL STORE REGISTRATION WIZARD ENGINE ---
-  currentBcwaStep: 1,
+  // --- BCWA 7-STEP WIZARD NAVIGATION & LOGIC ---
+  goToWizardStep(stepNum) {
+    if (stepNum < 1 || stepNum > 7) return;
+    this.currentWizardStep = stepNum;
+
+    for (let i = 1; i <= 7; i++) {
+      const stepPanel = document.getElementById(`bcwaWizardStep_${i}`);
+      const stepBtn = document.getElementById(`wizardStepBtn_${i}`);
+      if (stepPanel) stepPanel.style.display = i === stepNum ? "block" : "none";
+      if (stepBtn) {
+        if (i === stepNum) stepBtn.classList.add("active");
+        else stepBtn.classList.remove("active");
+      }
+    }
+
+    const prevBtn = document.getElementById("btnWizardPrev");
+    const nextBtn = document.getElementById("btnWizardNext");
+    const submitBtn = document.getElementById("btnWizardSubmit");
+
+    if (prevBtn) prevBtn.style.display = stepNum > 1 ? "inline-flex" : "none";
+    if (nextBtn) nextBtn.style.display = stepNum < 7 ? "inline-flex" : "none";
+    if (submitBtn) submitBtn.style.display = stepNum === 7 ? "inline-flex" : "none";
+
+    if (stepNum === 7) {
+      this.renderBcwaWizardPreview();
+    }
+  }
+
+  nextWizardStep() {
+    if (this.currentWizardStep === 1) {
+      const name = document.getElementById("bcwaStoreName")?.value?.trim();
+      const phone = document.getElementById("bcwaContactNumber")?.value?.trim();
+      const addr = document.getElementById("bcwaAddress")?.value?.trim();
+      if (!name || !phone || !addr) {
+        alert("Please complete required Step 1 fields: Medical Store Name, Contact Phone, and Address Line.");
+        return;
+      }
+    } else if (this.currentWizardStep === 2) {
+      const owner = document.getElementById("bcwaOwnerName")?.value?.trim();
+      if (!owner) {
+        alert("Please enter Owner Full Name in Step 2.");
+        return;
+      }
+    }
+    this.goToWizardStep(this.currentWizardStep + 1);
+  }
+
+  prevWizardStep() {
+    this.goToWizardStep(this.currentWizardStep - 1);
+  }
+
+  addWizardPharmacistRow(data = {}) {
+    const container = document.getElementById("bcwaWizardPharmacistsContainer");
+    if (!container) return;
+
+    const rowId = `pharmRow_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const card = document.createElement("div");
+    card.id = rowId;
+    card.className = "wizard-pharm-card";
+    card.style.cssText = "background: rgba(255,255,255,0.03); border: 1px solid var(--accent-purple); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.8rem;";
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+        <strong style="color: var(--accent-purple); font-size: 0.85rem;"><i class="fa-solid fa-user-doctor"></i> Registered Pharmacist Details</strong>
+        <button type="button" class="btn-back" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="document.getElementById('${rowId}').remove()"><i class="fa-solid fa-trash"></i> Remove</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Pharmacist Name *</label>
+          <input type="text" class="pharm-input-name" value="${data.pharmacist_name || ''}" placeholder="e.g. Kartik Bhosale" style="font-size: 0.8rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Pharmacist Mobile</label>
+          <input type="text" class="pharm-input-mobile" value="${data.pharmacist_mobile || ''}" placeholder="10-digit mobile" style="font-size: 0.8rem;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Pharmacist Email</label>
+          <input type="email" class="pharm-input-email" value="${data.pharmacist_email || ''}" placeholder="pharma@gmail.com" style="font-size: 0.8rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">MSPC Registration No</label>
+          <input type="text" class="pharm-input-mspc" value="${data.mspc_reg_no || ''}" placeholder="e.g. 189423" style="font-size: 0.8rem;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.72rem;">PPP Number</label>
+          <input type="text" class="pharm-input-ppp" value="${data.ppp_number || ''}" placeholder="PPP189423" style="font-size: 0.78rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.72rem;">PPP Expiry Date</label>
+          <input type="date" class="pharm-input-pppexpiry" value="${data.ppp_expiry || ''}" style="font-size: 0.78rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.72rem;">MSPC Reg Expiry</label>
+          <input type="date" class="pharm-input-regexpiry" value="${data.reg_expiry || ''}" style="font-size: 0.78rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.72rem;">Joining Date</label>
+          <input type="date" class="pharm-input-joining" value="${data.joining_date || ''}" style="font-size: 0.78rem;">
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+
+  getWizardPharmacistsList() {
+    const cards = document.querySelectorAll("#bcwaWizardPharmacistsContainer .wizard-pharm-card");
+    const list = [];
+    cards.forEach(card => {
+      const name = card.querySelector(".pharm-input-name")?.value?.trim();
+      if (name) {
+        list.push({
+          pharmacist_name: name,
+          pharmacist_mobile: card.querySelector(".pharm-input-mobile")?.value?.trim() || "",
+          pharmacist_email: card.querySelector(".pharm-input-email")?.value?.trim() || "",
+          mspc_reg_no: card.querySelector(".pharm-input-mspc")?.value?.trim() || "",
+          ppp_number: card.querySelector(".pharm-input-ppp")?.value?.trim() || "",
+          ppp_expiry: card.querySelector(".pharm-input-pppexpiry")?.value || "",
+          reg_expiry: card.querySelector(".pharm-input-regexpiry")?.value || "",
+          joining_date: card.querySelector(".pharm-input-joining")?.value || ""
+        });
+      }
+    });
+    return list;
+  }
+
+  renderBcwaWizardPreview() {
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || "N/A";
+    const container = document.getElementById("bcwaWizardPreviewContainer");
+    if (!container) return;
+
+    const pharmList = this.getWizardPharmacistsList();
+
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; color: var(--text-bright); font-size: 0.82rem; line-height: 1.6;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+          <h5 style="color: var(--accent-green); margin: 0 0 0.5rem 0;"><i class="fa-solid fa-store"></i> 1. Medical Store & Address</h5>
+          <div><strong>Store Name:</strong> ${getVal("bcwaStoreName")}</div>
+          <div><strong>Business Type:</strong> ${getVal("bcwaBusinessType")}</div>
+          <div><strong>Contact Phone:</strong> ${getVal("bcwaContactNumber")} | <strong>Email:</strong> ${getVal("bcwaEmail")}</div>
+          <div><strong>Full Address:</strong> ${getVal("bcwaAddress")}, ${getVal("bcwaCity")}, ${getVal("bcwaDistrict")} - ${getVal("bcwaPin")}</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+          <h5 style="color: var(--accent-blue); margin: 0 0 0.5rem 0;"><i class="fa-solid fa-user-tie"></i> 2. Owner Details & KYC</h5>
+          <div><strong>Owner Name:</strong> ${getVal("bcwaOwnerName")}</div>
+          <div><strong>Mobile:</strong> ${getVal("bcwaOwnerMobile")} | <strong>WhatsApp:</strong> ${getVal("bcwaOwnerWhatsapp")}</div>
+          <div><strong>Personal Email:</strong> ${getVal("bcwaOwnerEmail")}</div>
+          <div><strong>Aadhaar:</strong> ${getVal("bcwaOwnerAadhaar")} | <strong>PAN:</strong> ${getVal("bcwaOwnerPan")}</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+          <h5 style="color: #f59e0b; margin: 0 0 0.5rem 0;"><i class="fa-solid fa-capsules"></i> 3. Drug License</h5>
+          <div><strong>20B No:</strong> ${getVal("bcwaDl20b")} | <strong>21B No:</strong> ${getVal("bcwaDl21b")}</div>
+          <div><strong>Issue Date:</strong> ${getVal("bcwaDlIssueDate")} | <strong>Expiry Date:</strong> <span style="color: #f59e0b; font-weight:700;">${getVal("bcwaDlExpiry")}</span></div>
+          <div><strong>Authority:</strong> ${getVal("bcwaDlAuthority")}</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem;">
+          <h5 style="color: #3b82f6; margin: 0 0 0.5rem 0;"><i class="fa-solid fa-utensils"></i> 4. Food License & Rent</h5>
+          <div><strong>FSSAI No:</strong> ${getVal("bcwaFssaiNumber")}</div>
+          <div><strong>FSSAI Expiry:</strong> ${getVal("bcwaFssaiExpiry")}</div>
+          <div><strong>Rent Expiry:</strong> ${getVal("bcwaRentExpiry")}</div>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--accent-purple); border-radius: 8px; padding: 0.8rem; margin-top: 0.8rem;">
+        <h5 style="color: var(--accent-purple); margin: 0 0 0.5rem 0;"><i class="fa-solid fa-user-doctor"></i> 5. Assigned Pharmacists (${pharmList.length})</h5>
+        ${pharmList.length === 0 ? '<div style="color: var(--text-muted); font-size: 0.78rem;">No pharmacists added to store profile.</div>' : `
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.5rem;">
+            ${pharmList.map(p => `
+              <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 0.5rem; font-size: 0.78rem;">
+                <strong style="color: #fff;">${p.pharmacist_name}</strong>
+                <div style="color: var(--text-muted);">MSPC: ${p.mspc_reg_no || 'N/A'} | Mobile: ${p.pharmacist_mobile || 'N/A'}</div>
+                <div style="color: var(--accent-purple);">PPP Expiry: ${p.ppp_expiry || 'N/A'}</div>
+              </div>
+            `).join("")}
+          </div>
+        `}
+      </div>
+    `;
+  }
 
   openAddBcwaStoreModal(storeId = "") {
     document.getElementById("bcwaStoreId").value = storeId;
-    document.getElementById("bcwaWizPharmacistListContainer").innerHTML = "";
+    const container = document.getElementById("bcwaWizardPharmacistsContainer");
+    if (container) container.innerHTML = "";
 
     if (storeId && this.bcwaStores) {
       const s = this.bcwaStores.find(item => item.id === storeId);
       if (s) {
         document.getElementById("bcwaStoreName").value = s.store_name || "";
-        document.getElementById("bcwaBusinessType").value = s.business_type || "Proprietorship";
-        document.getElementById("bcwaGstNumber").value = s.gst_number || "";
-        document.getElementById("bcwaEstYear").value = s.est_year || "";
-        document.getElementById("bcwaContactNumber").value = s.contact_number || "";
-        document.getElementById("bcwaAltMobile").value = s.alt_mobile || "";
-        document.getElementById("bcwaEmail").value = s.email || "";
-        document.getElementById("bcwaWebsite").value = s.website || "";
-        document.getElementById("bcwaAddress").value = s.address || "";
-
         document.getElementById("bcwaOwnerName").value = s.owner_name || "";
-        document.getElementById("bcwaOwnerMobile").value = s.owner_mobile || s.contact_number || "";
-        document.getElementById("bcwaOwnerWhatsapp").value = s.owner_whatsapp || "";
-        document.getElementById("bcwaOwnerAadhaar").value = s.owner_aadhaar || "";
-        document.getElementById("bcwaOwnerPan").value = s.owner_pan || "";
-        document.getElementById("bcwaOwnerResAddress").value = s.owner_res_address || "";
-
+        document.getElementById("bcwaBusinessType").value = s.business_type || "Proprietorship";
+        document.getElementById("bcwaContactNumber").value = s.contact_number || "";
+        document.getElementById("bcwaEmail").value = s.email || "";
+        document.getElementById("bcwaAddress").value = s.address || "";
         document.getElementById("bcwaDl20b").value = s.dl_20b || "";
         document.getElementById("bcwaDl21b").value = s.dl_21b || "";
         document.getElementById("bcwaDlIssueDate").value = s.dl_issue_date || "";
         document.getElementById("bcwaDlExpiry").value = s.dl_expiry || "";
-        document.getElementById("bcwaDlAuthority").value = s.dl_authority || "";
-        document.getElementById("bcwaDlRemarks").value = s.dl_remarks || "";
-
         document.getElementById("bcwaFssaiNumber").value = s.fssai_number || "";
-        document.getElementById("bcwaFssaiIssueDate").value = s.fssai_issue_date || "";
         document.getElementById("bcwaFssaiExpiry").value = s.fssai_expiry || "";
         document.getElementById("bcwaRentExpiry").value = s.rent_agreement_expiry || "";
-        document.getElementById("bcwaStoreNotes").value = s.store_notes || "";
 
-        // Preload assigned pharmacists
-        const pharmList = (this.bcwaPharmacists || []).filter(p => p.store_id === storeId);
-        if (pharmList.length > 0) {
-          pharmList.forEach(p => this.addBcwaWizPharmacistCard(p));
+        const assignedPharms = (this.bcwaPharmacists || []).filter(p => p.store_id === storeId);
+        if (assignedPharms.length > 0) {
+          assignedPharms.forEach(p => this.addWizardPharmacistRow(p));
         } else {
-          this.addBcwaWizPharmacistCard();
+          this.addWizardPharmacistRow();
         }
       }
     } else {
-      const ids = [
-        "bcwaStoreName", "bcwaGstNumber", "bcwaEstYear", "bcwaContactNumber", "bcwaAltMobile", "bcwaEmail", "bcwaWebsite", "bcwaAddress",
-        "bcwaOwnerName", "bcwaOwnerMobile", "bcwaOwnerWhatsapp", "bcwaOwnerAadhaar", "bcwaOwnerPan", "bcwaOwnerResAddress",
-        "bcwaDl20b", "bcwaDl21b", "bcwaDlIssueDate", "bcwaDlExpiry", "bcwaDlAuthority", "bcwaDlRemarks",
-        "bcwaFssaiNumber", "bcwaFssaiIssueDate", "bcwaFssaiExpiry", "bcwaRentExpiry", "bcwaStoreNotes"
-      ];
+      const ids = ["bcwaStoreName", "bcwaOwnerName", "bcwaOwnerMobile", "bcwaOwnerWhatsapp", "bcwaOwnerEmail", "bcwaOwnerAadhaar", "bcwaOwnerPan", "bcwaContactNumber", "bcwaEmail", "bcwaAddress", "bcwaDl20b", "bcwaDl21b", "bcwaDlIssueDate", "bcwaDlExpiry", "bcwaDlRemarks", "bcwaFssaiNumber", "bcwaFssaiIssueDate", "bcwaFssaiExpiry", "bcwaRentExpiry"];
       ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-      this.addBcwaWizPharmacistCard();
+      this.addWizardPharmacistRow();
     }
 
-    this.goToBcwaWizardStep(1);
+    this.goToWizardStep(1);
     document.getElementById("bcwaStoreModal").style.display = "flex";
-  },
+  }
 
   closeBcwaStoreModal() {
     document.getElementById("bcwaStoreModal").style.display = "none";
-  },
-
-  goToBcwaWizardStep(targetStep) {
-    if (targetStep > this.currentBcwaStep) {
-      if (!this.validateBcwaWizardStep(this.currentBcwaStep)) return;
-    }
-
-    this.currentBcwaStep = targetStep;
-
-    for (let i = 1; i <= 7; i++) {
-      const panel = document.getElementById(`bcwaWizStep${i}`);
-      const btn = document.getElementById(`bcwaWizIndicator${i}`);
-      if (panel) panel.style.display = i === targetStep ? "block" : "none";
-      if (btn) btn.classList.toggle("active", i === targetStep);
-    }
-
-    const prevBtn = document.getElementById("bcwaWizPrevBtn");
-    const nextBtn = document.getElementById("bcwaWizNextBtn");
-    const submitBtn = document.getElementById("bcwaWizSubmitBtn");
-
-    if (prevBtn) prevBtn.style.display = targetStep > 1 ? "inline-flex" : "none";
-    if (nextBtn) nextBtn.style.display = targetStep < 7 ? "inline-flex" : "none";
-    if (submitBtn) submitBtn.style.display = targetStep === 7 ? "inline-flex" : "none";
-
-    if (targetStep === 7) {
-      this.renderBcwaWizardPreview();
-    }
-  },
-
-  nextBcwaWizardStep() {
-    if (this.currentBcwaStep < 7) {
-      this.goToBcwaWizardStep(this.currentBcwaStep + 1);
-    }
-  },
-
-  prevBcwaWizardStep() {
-    if (this.currentBcwaStep > 1) {
-      this.goToBcwaWizardStep(this.currentBcwaStep - 1);
-    }
-  },
-
-  validateBcwaWizardStep(step) {
-    const getVal = (id) => document.getElementById(id)?.value?.trim() || "";
-
-    if (step === 1) {
-      const storeName = getVal("bcwaStoreName");
-      const mobile = getVal("bcwaContactNumber");
-
-      if (!storeName) {
-        alert("Medical Store Name is required!");
-        document.getElementById("bcwaStoreName")?.focus();
-        return false;
-      }
-      if (!mobile || !/^\d{10}$/.test(mobile)) {
-        alert("Please enter a valid 10-digit Store Contact Number!");
-        document.getElementById("bcwaContactNumber")?.focus();
-        return false;
-      }
-    } else if (step === 2) {
-      const ownerName = getVal("bcwaOwnerName");
-      const ownerMobile = getVal("bcwaOwnerMobile");
-
-      if (!ownerName) {
-        alert("Owner Full Name is required!");
-        document.getElementById("bcwaOwnerName")?.focus();
-        return false;
-      }
-      if (!ownerMobile || !/^\d{10}$/.test(ownerMobile)) {
-        alert("Please enter a valid 10-digit Owner Mobile Number!");
-        document.getElementById("bcwaOwnerMobile")?.focus();
-        return false;
-      }
-    } else if (step === 3) {
-      const dl20b = getVal("bcwaDl20b");
-      const dl21b = getVal("bcwaDl21b");
-      const expiry = getVal("bcwaDlExpiry");
-
-      if (!dl20b || !dl21b) {
-        alert("Drug License 20B and 21B Numbers are required!");
-        document.getElementById("bcwaDl20b")?.focus();
-        return false;
-      }
-      if (!expiry) {
-        alert("Drug License Expiry Date is required!");
-        document.getElementById("bcwaDlExpiry")?.focus();
-        return false;
-      }
-    } else if (step === 4) {
-      const fssai = getVal("bcwaFssaiNumber");
-      const expiry = getVal("bcwaFssaiExpiry");
-
-      if (!fssai) {
-        alert("FSSAI Registration Number is required!");
-        document.getElementById("bcwaFssaiNumber")?.focus();
-        return false;
-      }
-      if (!expiry) {
-        alert("Food License Expiry Date is required!");
-        document.getElementById("bcwaFssaiExpiry")?.focus();
-        return false;
-      }
-    }
-    return true;
-  },
-
-  addBcwaWizPharmacistCard(p = {}) {
-    const container = document.getElementById("bcwaWizPharmacistListContainer");
-    if (!container) return;
-
-    const cardId = "pharmCard_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-    const cardHtml = `
-      <div id="${cardId}" class="wiz-pharm-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.4rem;">
-          <strong style="color: var(--accent-purple); font-size: 0.88rem;"><i class="fa-solid fa-user-doctor"></i> Registered Pharmacist Profile</strong>
-          <button type="button" class="btn-back" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="document.getElementById('${cardId}').remove()">
-            <i class="fa-solid fa-trash"></i> Remove
-          </button>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.6rem;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.75rem;">Pharmacist Full Name *</label>
-            <input type="text" class="wiz-pharm-name" value="${p.pharmacist_name || ''}" placeholder="e.g. Rahul Patil" style="font-size: 0.8rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.75rem;">Qualification</label>
-            <input type="text" class="wiz-pharm-qual" value="${p.qualification || 'B.Pharm'}" placeholder="B.Pharm / D.Pharm" style="font-size: 0.8rem;">
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">MSPC Reg No *</label>
-            <input type="text" class="wiz-pharm-mspc" value="${p.mspc_reg_no || ''}" placeholder="e.g. 194562" style="font-size: 0.78rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">PPP Number</label>
-            <input type="text" class="wiz-pharm-ppp" value="${p.ppp_number || ''}" placeholder="PPP194562" style="font-size: 0.78rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">Mobile Number *</label>
-            <input type="text" class="wiz-pharm-mobile" value="${p.pharmacist_mobile || ''}" placeholder="10 digits" style="font-size: 0.78rem;">
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">PPP Expiry Date</label>
-            <input type="date" class="wiz-pharm-ppp-exp" value="${p.ppp_expiry || ''}" style="font-size: 0.78rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">MSPC Reg Expiry</label>
-            <input type="date" class="wiz-pharm-reg-exp" value="${p.reg_expiry || ''}" style="font-size: 0.78rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label style="font-size: 0.72rem;">Joining Date</label>
-            <input type="date" class="wiz-pharm-joining" value="${p.joining_date || ''}" style="font-size: 0.78rem;">
-          </div>
-        </div>
-      </div>
-    `;
-    container.insertAdjacentHTML("beforeend", cardHtml);
-  },
-
-  renderBcwaWizardPreview() {
-    const container = document.getElementById("bcwaWizPreviewContainer");
-    if (!container) return;
-
-    const getVal = (id) => document.getElementById(id)?.value?.trim() || "N/A";
-
-    const storeName = getVal("bcwaStoreName");
-    const busType = document.getElementById("bcwaBusinessType")?.value || "Proprietorship";
-    const contact = getVal("bcwaContactNumber");
-    const address = getVal("bcwaAddress");
-
-    const ownerName = getVal("bcwaOwnerName");
-    const ownerMobile = getVal("bcwaOwnerMobile");
-
-    const dl20b = getVal("bcwaDl20b");
-    const dl21b = getVal("bcwaDl21b");
-    const dlExpiry = getVal("bcwaDlExpiry");
-
-    const fssai = getVal("bcwaFssaiNumber");
-    const fssaiExpiry = getVal("bcwaFssaiExpiry");
-
-    const pharmCards = document.querySelectorAll(".wiz-pharm-card");
-    let pharmSummaryHtml = "";
-    pharmCards.forEach((card, idx) => {
-      const name = card.querySelector(".wiz-pharm-name")?.value || "N/A";
-      const mspc = card.querySelector(".wiz-pharm-mspc")?.value || "N/A";
-      const ppp = card.querySelector(".wiz-pharm-ppp")?.value || "N/A";
-      const pppExp = card.querySelector(".wiz-pharm-ppp-exp")?.value || "N/A";
-      pharmSummaryHtml += `
-        <div style="font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
-          <strong>Pharmacist #${idx + 1}:</strong> ${name} | MSPC: ${mspc} | PPP: ${ppp} (Exp: ${pppExp})
-        </div>
-      `;
-    });
-
-    container.innerHTML = `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.9rem;">
-          <h5 style="color: var(--accent-green); margin: 0 0 0.6rem 0;"><i class="fa-solid fa-store"></i> Store Information</h5>
-          <div style="font-size: 0.82rem; line-height: 1.6; color: var(--text-bright);">
-            <div><strong>Store Name:</strong> ${storeName}</div>
-            <div><strong>Business Type:</strong> ${busType}</div>
-            <div><strong>Contact Number:</strong> ${contact}</div>
-            <div><strong>Shop Address:</strong> ${address}</div>
-          </div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.9rem;">
-          <h5 style="color: var(--accent-blue); margin: 0 0 0.6rem 0;"><i class="fa-solid fa-user-tie"></i> Owner Info</h5>
-          <div style="font-size: 0.82rem; line-height: 1.6; color: var(--text-bright);">
-            <div><strong>Owner Name:</strong> ${ownerName}</div>
-            <div><strong>Owner Mobile:</strong> ${ownerMobile}</div>
-            <div><strong>Aadhaar:</strong> ${getVal("bcwaOwnerAadhaar")}</div>
-            <div><strong>PAN:</strong> ${getVal("bcwaOwnerPan")}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.9rem;">
-          <h5 style="color: #f59e0b; margin: 0 0 0.6rem 0;"><i class="fa-solid fa-capsules"></i> Licenses Summary</h5>
-          <div style="font-size: 0.82rem; line-height: 1.6; color: var(--text-bright);">
-            <div><strong>DL 20B:</strong> ${dl20b} | <strong>21B:</strong> ${dl21b}</div>
-            <div><strong>DL Expiry:</strong> <span style="color: #f59e0b;">${dlExpiry}</span></div>
-            <div><strong>FSSAI Number:</strong> ${fssai}</div>
-            <div><strong>Food License Expiry:</strong> <span style="color: #3b82f6;">${fssaiExpiry}</span></div>
-          </div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.9rem;">
-          <h5 style="color: var(--accent-purple); margin: 0 0 0.6rem 0;"><i class="fa-solid fa-user-doctor"></i> Pharmacists (${pharmCards.length})</h5>
-          ${pharmSummaryHtml || '<div style="font-size: 0.8rem; color: var(--text-muted);">No pharmacist assigned.</div>'}
-        </div>
-      </div>
-    `;
-  },
+  }
 
   async handleBcwaStoreSubmit(event) {
     if (event) event.preventDefault();
-
     const getVal = (id) => document.getElementById(id)?.value?.trim() || "";
-
-    const pharmCards = document.querySelectorAll(".wiz-pharm-card");
-    const pharmacistsList = [];
-    pharmCards.forEach(card => {
-      const pName = card.querySelector(".wiz-pharm-name")?.value?.trim();
-      if (pName) {
-        pharmacistsList.push({
-          pharmacist_name: pName,
-          qualification: card.querySelector(".wiz-pharm-qual")?.value?.trim() || "B.Pharm",
-          mspc_reg_no: card.querySelector(".wiz-pharm-mspc")?.value?.trim() || "",
-          ppp_number: card.querySelector(".wiz-pharm-ppp")?.value?.trim() || "",
-          pharmacist_mobile: card.querySelector(".wiz-pharm-mobile")?.value?.trim() || "",
-          ppp_expiry: card.querySelector(".wiz-pharm-ppp-exp")?.value?.trim() || "",
-          reg_expiry: card.querySelector(".wiz-pharm-reg-exp")?.value?.trim() || "",
-          joining_date: card.querySelector(".wiz-pharm-joining")?.value?.trim() || ""
-        });
-      }
-    });
 
     const payload = {
       id: document.getElementById("bcwaStoreId")?.value || undefined,
       store_name: getVal("bcwaStoreName"),
       owner_name: getVal("bcwaOwnerName"),
-      business_type: document.getElementById("bcwaBusinessType")?.value || "Proprietorship",
-      gst_number: getVal("bcwaGstNumber"),
-      est_year: getVal("bcwaEstYear"),
-      contact_number: getVal("bcwaContactNumber"),
-      alt_mobile: getVal("bcwaAltMobile"),
-      email: getVal("bcwaEmail"),
-      website: getVal("bcwaWebsite"),
-      address: getVal("bcwaAddress"),
-      
       owner_mobile: getVal("bcwaOwnerMobile"),
       owner_whatsapp: getVal("bcwaOwnerWhatsapp"),
+      owner_email: getVal("bcwaOwnerEmail"),
       owner_aadhaar: getVal("bcwaOwnerAadhaar"),
       owner_pan: getVal("bcwaOwnerPan"),
-      owner_res_address: getVal("bcwaOwnerResAddress"),
-
+      business_type: document.getElementById("bcwaBusinessType")?.value || "Proprietorship",
+      contact_number: getVal("bcwaContactNumber"),
+      email: getVal("bcwaEmail"),
+      address: `${getVal("bcwaAddress")}, ${getVal("bcwaCity")}, ${getVal("bcwaDistrict")} - ${getVal("bcwaPin")}`,
       dl_20b: getVal("bcwaDl20b"),
       dl_21b: getVal("bcwaDl21b"),
       dl_issue_date: getVal("bcwaDlIssueDate"),
       dl_expiry: getVal("bcwaDlExpiry"),
       dl_authority: getVal("bcwaDlAuthority"),
       dl_remarks: getVal("bcwaDlRemarks"),
-
       fssai_number: getVal("bcwaFssaiNumber"),
       fssai_issue_date: getVal("bcwaFssaiIssueDate"),
       fssai_expiry: getVal("bcwaFssaiExpiry"),
       rent_agreement_expiry: getVal("bcwaRentExpiry"),
-      store_notes: getVal("bcwaStoreNotes"),
-
-      pharmacists: pharmacistsList,
-      compliance_score: 96
+      compliance_score: 98
     };
 
     if (!payload.store_name || !payload.owner_name || !payload.contact_number) {
-      alert("Please fill in required fields: Medical Store Name, Owner Name, and Contact Number.");
+      alert("Please complete required fields: Medical Store Name, Owner Name, and Contact Number.");
       return;
     }
 
@@ -3092,15 +2982,28 @@ class DocFlowApp {
       });
       const data = await res.json();
       if (data.status === "success") {
-        this.showToast(`Medical Store '${payload.store_name}' saved to BCWA Vault & Firestore!`);
+        const storeObj = data.store;
+        const storeId = storeObj.id;
+
+        // Batch save assigned pharmacists from Step 5
+        const wizardPharms = this.getWizardPharmacistsList();
+        for (const pharm of wizardPharms) {
+          pharm.store_id = storeId;
+          await fetch("/api/bcwa/add_pharmacist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(pharm)
+          });
+        }
+
+        this.showToast(`Store '${payload.store_name}' registered successfully with ${wizardPharms.length} pharmacist(s)!`);
         this.closeBcwaStoreModal();
         await this.loadBcwaStores();
-        this.switchBcwaSubTab("stores");
       } else {
-        alert(data.message || "Failed to save store.");
+        alert(data.message || "Failed to save store profile.");
       }
     } catch (e) {
-      alert("Error saving store: " + e.message);
+      alert("Error saving store profile: " + e.message);
     }
   }
 
