@@ -6,8 +6,6 @@
   <title>DocFlow Pro - Government Document Preparation Portal</title>
   <link rel="stylesheet" href="/static/styles.css?v=3.0.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
@@ -337,19 +335,16 @@
     <section id="pdfEditorTab" style="display: none;">
       <div class="hero-header" style="margin-bottom: 1.2rem;">
         <h1>PDF Utility & Editing Suite</h1>
-        <p>Access professional PDF tools across 3 dedicated suites: Sejda PDF Editor, iLovePDF Merge, or DocFlow PDF Studio & Compressor.</p>
+        <p>Access professional PDF tools across 2 dedicated suites: Sejda PDF Editor or iLovePDF Merge Tool.</p>
       </div>
 
-      <!-- 3 Sub-Section Navigation Pills -->
+      <!-- 2 Sub-Section Navigation Pills -->
       <div style="display: flex; justify-content: center; gap: 0.8rem; margin-bottom: 1.8rem; flex-wrap: wrap;">
         <button type="button" class="btn-primary" id="subTabSejdaBtn" onclick="docFlowApp.switchPdfSubTab('sejda')" style="background: var(--accent-green);">
           <i class="fa-solid fa-pen-to-square"></i> 1. Sejda PDF Editor
         </button>
         <button type="button" class="btn-back" id="subTabILovePdfBtn" onclick="docFlowApp.switchPdfSubTab('ilovepdf')">
           <i class="fa-solid fa-code-merge"></i> 2. iLovePDF Merge Tool
-        </button>
-        <button type="button" class="btn-back" id="subTabDocFlowBtn" onclick="docFlowApp.switchPdfSubTab('docflow')">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> 3. DocFlow PDF Studio & Compressor
         </button>
       </div>
 
@@ -390,233 +385,6 @@
         </div>
         <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-glass-glow); background: #fff; height: 620px;">
           <iframe src="https://www.ilovepdf.com/merge_pdf" style="width: 100%; height: 100%; border: none;" title="iLovePDF Merge Tool"></iframe>
-        </div>
-      </div>
-
-      <!-- SECTION 3: DOCFLOW NATIVE PDF STUDIO & COMPRESSOR SUITE -->
-      <div id="pdfSubTabDocFlow" style="display: none;">
-        
-        <!-- PDF Studio Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem; background: rgba(15, 23, 42, 0.6); padding: 0.8rem 1.2rem; border-radius: 12px; border: 1px solid var(--border-glass);">
-          <div>
-            <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-bright); display: flex; align-items: center; gap: 0.6rem;">
-              <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> DocFlow Native PDF Studio
-            </h2>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Original Open-Source Web PDF Editor Suite</span>
-          </div>
-
-          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-            <input type="file" id="pdfStudioFileInput" accept="application/pdf" style="display: none;" onchange="docFlowApp.loadPdfIntoStudio(this.files)">
-            <button type="button" class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
-              <i class="fa-solid fa-folder-open"></i> Open PDF
-            </button>
-            
-            <button type="button" class="btn-back" onclick="docFlowApp.exportStudioPdf()" style="padding: 0.45rem 1rem; font-size: 0.85rem; border-color: var(--accent-green); color: var(--accent-green);">
-              <i class="fa-solid fa-download"></i> Export PDF
-            </button>
-
-            <button type="button" id="studioReturnWfBtn" onclick="docFlowApp.saveAndReturnToWorkflow()" class="btn-primary" style="display: none; padding: 0.45rem 1rem; font-size: 0.85rem; background: var(--accent-purple);">
-              <i class="fa-solid fa-check-double"></i> Save & Return to Workflow
-            </button>
-          </div>
-        </div>
-
-        <!-- Studio Empty State Dropzone -->
-        <div id="studioEmptyState" class="doc-card" style="text-align: center; padding: 2.5rem 1.5rem; max-width: 700px; margin: 1.5rem auto;">
-          <i class="fa-solid fa-file-pdf" style="font-size: 3.5rem; color: var(--accent-blue); margin-bottom: 1rem;"></i>
-          <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">Select a PDF Document to Edit in PDF Studio</h3>
-          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
-            Drag & drop page thumbnails, edit text overlays, e-sign, whiteout sections, and compress output PDFs.
-          </p>
-          <button class="btn-primary" onclick="document.getElementById('pdfStudioFileInput').click()" style="padding: 0.8rem 1.8rem; font-size: 1rem;">
-            <i class="fa-solid fa-folder-open"></i> Browse & Load PDF
-          </button>
-        </div>
-
-        <!-- Native PDF Merge Tool with Desired Target KB Output Size -->
-        <div id="pdfMergeToolCard" class="doc-card" style="max-width: 850px; margin: 1.5rem auto; border-color: var(--accent-blue);">
-          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-code-merge"></i> Native PDF Merge Tool & Target Size Compressor
-          </h3>
-          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
-            Upload multiple PDF or image files, specify your desired maximum target output size (e.g. 125 KB, 150 KB, 250 KB), and merge them into a single compressed PDF.
-          </p>
-
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
-            <div style="flex: 1; min-width: 250px;">
-              <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Select Files to Merge (PDF / Images):</label>
-              <input type="file" id="mergeInputFiles" multiple accept="application/pdf,image/*" style="font-size: 0.85rem;" onchange="docFlowApp.handleMergeFilesSelected(this.files)">
-            </div>
-
-            <div style="width: 180px;">
-              <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">Desired Output Size (KB):</label>
-              <select id="mergeTargetKb" style="font-size: 0.85rem; width: 100%;">
-                <option value="125" selected>125 KB (Standard)</option>
-                <option value="150">150 KB</option>
-                <option value="200">200 KB</option>
-                <option value="300">300 KB</option>
-                <option value="500">500 KB</option>
-              </select>
-            </div>
-
-            <div style="align-self: flex-end;">
-              <button type="button" class="btn-primary" onclick="docFlowApp.executeMergePdfs()" style="padding: 0.55rem 1.2rem; font-size: 0.88rem; background: var(--accent-blue);">
-                <i class="fa-solid fa-file-export"></i> Merge & Compress PDFs
-              </button>
-            </div>
-          </div>
-
-          <div id="mergeFilesSelectedList" style="font-size: 0.78rem; color: var(--text-muted);"></div>
-        </div>
-
-        <!-- PDF Studio Workspace (3-Column Layout) -->
-        <div id="pdfStudioWorkspace" style="display: none;">
-          <!-- 3 Column grid -->
-        </div>
-
-      </div>
-    </section>
-
-      <!-- PDF Studio Main Workspace (3-Column Layout) -->
-      <div id="pdfStudioWorkspace" style="display: none;">
-        
-        <!-- Top Toolbar -->
-        <div class="studio-top-toolbar" style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border-glass-glow); border-radius: 12px; padding: 0.6rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; position: sticky; top: 70px; z-index: 500;">
-          
-          <!-- Tools Group -->
-          <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-            <button type="button" id="studioBtnSelect" onclick="docFlowApp.setStudioTool('select')" class="btn-primary" style="padding: 0.38rem 0.7rem; font-size: 0.78rem; background: var(--accent-blue);">
-              <i class="fa-solid fa-arrow-pointer"></i> Select
-            </button>
-            <button type="button" id="studioBtnText" onclick="docFlowApp.setStudioTool('text')" class="btn-back" style="padding: 0.38rem 0.7rem; font-size: 0.78rem;">
-              <i class="fa-solid fa-font"></i> Add Text
-            </button>
-            <button type="button" id="studioBtnSign" onclick="docFlowApp.openSignaturePadModal()" class="btn-back" style="padding: 0.38rem 0.7rem; font-size: 0.78rem; border-color: var(--accent-green); color: var(--accent-green);">
-              <i class="fa-solid fa-signature"></i> E-Sign
-            </button>
-            <button type="button" id="studioBtnWhiteout" onclick="docFlowApp.setStudioTool('whiteout')" class="btn-back" style="padding: 0.38rem 0.7rem; font-size: 0.78rem;">
-              <i class="fa-solid fa-eraser"></i> Whiteout
-            </button>
-
-            <span style="color: var(--border-glass); margin: 0 0.3rem;">|</span>
-
-            <!-- Zoom controls -->
-            <button type="button" onclick="docFlowApp.changeStudioZoom(-0.15)" class="btn-back" style="padding: 0.35rem 0.6rem; font-size: 0.78rem;">
-              <i class="fa-solid fa-magnifying-glass-minus"></i>
-            </button>
-            <span id="studioZoomVal" style="font-size: 0.78rem; font-weight: 700; color: var(--accent-blue);">100%</span>
-            <button type="button" onclick="docFlowApp.changeStudioZoom(0.15)" class="btn-back" style="padding: 0.35rem 0.6rem; font-size: 0.78rem;">
-              <i class="fa-solid fa-magnifying-glass-plus"></i>
-            </button>
-
-            <span style="color: var(--border-glass); margin: 0 0.3rem;">|</span>
-
-            <button type="button" onclick="docFlowApp.addStudioBlankPage()" class="btn-back" style="padding: 0.38rem 0.7rem; font-size: 0.78rem;">
-              <i class="fa-solid fa-plus"></i> Add Blank Page
-            </button>
-          </div>
-
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <button type="button" onclick="docFlowApp.clearStudioAnnotations()" class="btn-back" style="padding: 0.38rem 0.7rem; font-size: 0.78rem; color: #ef4444; border-color: rgba(239,68,68,0.4);">
-              <i class="fa-solid fa-trash-can"></i> Clear Items
-            </button>
-          </div>
-        </div>
-
-        <!-- 3-Column Studio Grid -->
-        <div style="display: grid; grid-template-columns: 200px 1fr 240px; gap: 1rem; align-items: start;">
-          
-          <!-- LEFT SIDEBAR: PAGE THUMBNAILS (Reorderable via Sortable.js) -->
-          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-glass); border-radius: 12px; padding: 0.8rem; max-height: 700px; overflow-y: auto;">
-            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; align-items: center; justify-content: space-between;">
-              <span><i class="fa-solid fa-images"></i> Pages</span>
-              <span id="studioPageCountBadge" style="color: var(--accent-blue);">0 Pages</span>
-            </h4>
-            <div id="studioThumbnailsList" style="display: flex; flex-direction: column; gap: 0.8rem;">
-              <!-- Dynamic page thumbnail cards -->
-            </div>
-          </div>
-
-          <!-- CENTER WORKSPACE: CURRENT PAGE CANVAS VIEWPORT -->
-          <div id="studioCenterViewport" style="background: #0f172a; border-radius: 12px; padding: 1.2rem; min-height: 600px; max-height: 700px; overflow: auto; display: flex; flex-direction: column; align-items: center; border: 1px solid var(--border-glass);">
-            <!-- Rendered pages -->
-          </div>
-
-          <!-- RIGHT PROPERTIES PANEL -->
-          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1rem;">
-            <h4 style="font-size: 0.88rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.4rem;">
-              <i class="fa-solid fa-sliders"></i> Tool Properties
-            </h4>
-
-            <!-- Dynamic Settings -->
-            <div class="form-group" style="margin-bottom: 0.8rem;">
-              <label style="font-size: 0.78rem;">Text Color</label>
-              <input type="color" id="studioTextColor" value="#0f172a" style="width: 100%; height: 32px; border: none; cursor: pointer; background: transparent;">
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0.8rem;">
-              <label style="font-size: 0.78rem;">Font Size</label>
-              <select id="studioFontSize" style="font-size: 0.8rem; width: 100%;">
-                <option value="12">12pt</option>
-                <option value="14" selected>14pt</option>
-                <option value="16">16pt</option>
-                <option value="20">20pt</option>
-                <option value="24">24pt</option>
-                <option value="32">32pt</option>
-              </select>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 1rem;">
-              <label style="font-size: 0.78rem;">Target Size Limit (KB)</label>
-              <input type="number" id="studioMaxKb" value="125" style="font-size: 0.85rem;">
-            </div>
-
-            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-blue); border-radius: 8px; padding: 0.8rem; font-size: 0.78rem; line-height: 1.4; color: var(--text-bright);">
-              <i class="fa-solid fa-circle-info" style="color: var(--accent-blue);"></i> <strong>Quick Tip:</strong><br>
-              Reorder page thumbnails on the left. Click on page overlay to insert text or whiteout blocks.
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom Status Bar -->
-        <div style="margin-top: 1rem; background: rgba(15, 23, 42, 0.8); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted);">
-          <span id="statusCurrentPage">Page 1 of 1</span>
-          <span id="statusZoom">Zoom: 100%</span>
-          <span id="statusTargetKb">Target Limit: < 125 KB</span>
-        </div>
-      </div>
-    </section>
-
-      <!-- SECTION 3: DOCFLOW CUSTOM COMPRESSOR & COMPILER -->
-      <div id="pdfSubTabCompress" class="doc-card" style="display: none; max-width: 800px; margin: 0 auto;">
-        <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-blue);"></i> DocFlow Pro Custom PDF Compressor</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-          Combine images/PDFs and compress strictly below your target KB limit with rotation and deblur support.
-        </p>
-
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Target File Name</label>
-          <input type="text" id="pdfCustomName" value="Custom_Document.pdf">
-        </div>
-
-        <div class="form-group">
-          <label>Max Target File Size (KB)</label>
-          <input type="number" id="pdfCustomMaxKb" value="125">
-        </div>
-
-        <div class="drop-zone" id="pdfDropZone" onclick="document.getElementById('pdfCustomFiles').click()">
-          <i class="fa-solid fa-file-circle-plus" style="font-size: 2.5rem; color: var(--accent-blue); margin-bottom: 0.8rem;"></i>
-          <p style="font-weight: 600;">Click to select images or PDF files</p>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem;">Supports JPG, PNG, WEBP, PDF</p>
-          <input type="file" id="pdfCustomFiles" multiple accept="image/*,application/pdf" style="display: none;" onchange="docFlowApp.handlePdfCustomFiles(this.files)">
-        </div>
-
-        <div id="pdfCustomFileList" style="margin-top: 1rem;"></div>
-
-        <div style="margin-top: 1.5rem; text-align: right;">
-          <button class="btn-primary" onclick="docFlowApp.buildCustomPdf()">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate & Download Compressed PDF
-          </button>
         </div>
       </div>
     </section>
@@ -778,58 +546,6 @@
 
       <div style="margin-top: 1.2rem; text-align: right;">
         <button class="btn-back" onclick="docFlowApp.closeMspcRedirectModal()">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: E-SIGNATURE PAD MODAL -->
-  <div id="signaturePadModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card" style="max-width: 500px; border-color: var(--accent-green);">
-      <div class="modal-header">
-        <h3><i class="fa-solid fa-signature" style="color: var(--accent-green);"></i> Create E-Signature</h3>
-        <button class="btn-close" onclick="docFlowApp.closeSignaturePadModal()">&times;</button>
-      </div>
-
-      <!-- Mode Switcher -->
-      <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.6rem;">
-        <button type="button" class="btn-primary" id="sigModeDrawBtn" onclick="docFlowApp.switchSigMode('draw')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem; background: var(--accent-green);">Draw</button>
-        <button type="button" class="btn-back" id="sigModeTypeBtn" onclick="docFlowApp.switchSigMode('type')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">Type</button>
-        <button type="button" class="btn-back" id="sigModeUploadBtn" onclick="docFlowApp.switchSigMode('upload')" style="font-size: 0.8rem; padding: 0.3rem 0.8rem;">Upload Image</button>
-      </div>
-
-      <!-- Draw Signature Canvas Area -->
-      <div id="sigDrawArea" style="text-align: center;">
-        <canvas id="sigCanvas" width="440" height="150" style="border: 2px dashed var(--accent-green); background: #ffffff; border-radius: 8px; cursor: crosshair; touch-action: none; width: 100%;"></canvas>
-        <div style="margin-top: 0.5rem; text-align: right;">
-          <button type="button" class="btn-back" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" onclick="docFlowApp.clearSigCanvas()">Clear Canvas</button>
-        </div>
-      </div>
-
-      <!-- Type Signature Area -->
-      <div id="sigTypeArea" style="display: none;">
-        <div class="form-group" style="margin-bottom: 0.8rem;">
-          <label style="font-size: 0.82rem;">Type Full Name for Signature</label>
-          <input type="text" id="sigTypedText" placeholder="e.g. Vinayak Ramesh Patil" style="font-size: 1.1rem;" oninput="docFlowApp.renderTypedSignature()">
-        </div>
-        <div id="sigTypePreview" style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 2.2rem; color: #0f172a; background: #ffffff; padding: 1rem; border-radius: 8px; text-align: center; border: 1px dashed var(--accent-green); min-height: 70px;">
-          Signature Preview
-        </div>
-      </div>
-
-      <!-- Upload Signature Image Area -->
-      <div id="sigUploadArea" style="display: none;">
-        <div class="drop-zone" onclick="document.getElementById('sigUploadInput').click()">
-          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--accent-green); margin-bottom: 0.4rem;"></i>
-          <p id="sigUploadFileName" style="font-size: 0.85rem; font-weight: 600;">Select Signature Image (JPG/PNG)</p>
-          <input type="file" id="sigUploadInput" accept="image/*" style="display: none;" onchange="docFlowApp.handleSigImageUpload(this.files)">
-        </div>
-      </div>
-
-      <div style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: 0.6rem;">
-        <button type="button" class="btn-back" onclick="docFlowApp.closeSignaturePadModal()">Cancel</button>
-        <button type="button" class="btn-primary" style="background: var(--accent-green);" onclick="docFlowApp.stampSignatureOntoDocument()">
-          <i class="fa-solid fa-check"></i> Stamp Signature onto Document
-        </button>
       </div>
     </div>
   </div>
