@@ -455,29 +455,3 @@ body {
   font-size: 1.5rem;
   cursor: pointer;
 }
-
-/* BCWA Store Registration Wizard Styles */
-.wiz-step-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
-  color: var(--text-muted);
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.wiz-step-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-bright);
-}
-
-.wiz-step-btn.active {
-  background: var(--accent-green);
-  color: #0d1117;
-  border-color: var(--accent-green);
-  box-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
-}
