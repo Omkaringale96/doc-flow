@@ -46,13 +46,23 @@ class DocFlowApp {
   }
 
   async handleLogin(event) {
-    event.preventDefault();
-    const usernameInput = document.getElementById("loginUsername").value.trim();
-    const passwordInput = document.getElementById("loginPassword").value.trim();
+    if (event) event.preventDefault();
+    const usernameInput = (document.getElementById("loginUsername")?.value || "").trim();
+    const passwordInput = (document.getElementById("loginPassword")?.value || "").trim();
     const errorBox = document.getElementById("loginErrorMsg");
 
-    errorBox.style.display = "none";
-    errorBox.innerText = "";
+    if (errorBox) {
+      errorBox.style.display = "none";
+      errorBox.innerText = "";
+    }
+
+    if (!usernameInput || !passwordInput) {
+      if (errorBox) {
+        errorBox.style.display = "block";
+        errorBox.innerText = "Please enter both Authorized Username and Password!";
+      }
+      return;
+    }
 
     try {
       const res = await fetch("/api/login", {
@@ -72,30 +82,44 @@ class DocFlowApp {
         this.showAuthenticatedApp();
         this.showToast(`Welcome back, Officer ${data.username}! Access Granted.`);
       } else {
-        errorBox.style.display = "block";
-        errorBox.innerText = data.message || "Invalid Authorized Username or Password!";
+        if (errorBox) {
+          errorBox.style.display = "block";
+          errorBox.innerText = data.message || "Invalid Authorized Username or Password!";
+        }
       }
     } catch (e) {
-      errorBox.style.display = "block";
-      errorBox.innerText = "Network or Server authentication error: " + e.message;
+      if (errorBox) {
+        errorBox.style.display = "block";
+        errorBox.innerText = "Network or Server authentication error: " + e.message;
+      }
     }
   }
 
   showAuthenticatedApp() {
-    document.getElementById("loginModalContainer").style.display = "none";
-    document.getElementById("mainAppContent").style.display = "block";
-    document.getElementById("userPillContainer").style.display = "flex";
+    const loginModal = document.getElementById("loginModalContainer");
+    const mainContent = document.getElementById("mainAppContent");
+    const userPill = document.getElementById("userPillContainer");
+
+    if (loginModal) loginModal.style.display = "none";
+    if (mainContent) mainContent.style.display = "block";
+    if (userPill) userPill.style.display = "flex";
     
     const addMemberNavBtn = document.getElementById("addMemberNavBtn");
-    if (this.currentUser === "Datta") {
-      document.getElementById("loggedInUserLabel").innerText = `Datta (Administrator)`;
-      if (addMemberNavBtn) addMemberNavBtn.style.display = "inline-flex";
-    } else {
-      document.getElementById("loggedInUserLabel").innerText = `${this.currentUser} (Authorized Member)`;
-      if (addMemberNavBtn) addMemberNavBtn.style.display = "none";
+    const loggedInUserLabel = document.getElementById("loggedInUserLabel");
+
+    const isDatta = (this.currentUser || "").toLowerCase() === "datta";
+    if (loggedInUserLabel) {
+      loggedInUserLabel.innerText = isDatta ? `Datta (Administrator)` : `${this.currentUser} (Authorized Member)`;
+    }
+    if (addMemberNavBtn) {
+      addMemberNavBtn.style.display = isDatta ? "inline-flex" : "none";
     }
 
-    this.loadBcwaStores();
+    try {
+      this.loadBcwaStores();
+    } catch (e) {
+      console.error("Error loading BCWA stores after login:", e);
+    }
   }
 
   showLoginModal() {
@@ -2122,23 +2146,6 @@ class DocFlowApp {
   // ----------------------------------------------------------------------
   // BCWA (Boisar Welfare Chemist Association) Platform Logic
   // ----------------------------------------------------------------------
-  async loadBcwaStores() {
-    try {
-      const res = await fetch("/api/bcwa/stores");
-      const data = await res.json();
-      if (data.status === "success" && data.stores) {
-        this.bcwaStores = data.stores;
-        this.renderBcwaDashboard();
-        this.renderBcwaStoresTable(this.bcwaStores);
-        this.renderBcwaReminders();
-        this.renderBcwaCalendar();
-        this.renderBcwaDirectory(this.bcwaStores);
-      }
-    } catch (e) {
-      console.error("Failed to load BCWA stores:", e);
-    }
-  }
-
   switchBcwaSubTab(subTab) {
     this.activeBcwaSubTab = subTab;
     const tabs = ["dashboard", "stores", "reminders", "calendar", "directory"];
