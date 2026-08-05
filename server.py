@@ -774,18 +774,26 @@ class ApiLoginHandler(BaseHandler):
                 return
 
             users_db = load_users()
-            if username in users_db and users_db[username] == password:
+            
+            # Case-insensitive username matching
+            matched_user = None
+            for u_name, u_pass in users_db.items():
+                if u_name.lower() == username.lower() and u_pass == password:
+                    matched_user = u_name
+                    break
+
+            if matched_user:
                 token = uuid.uuid4().hex
                 ACTIVE_SESSIONS[token] = {
-                    "username": username,
+                    "username": matched_user,
                     "created_at": datetime.now().isoformat()
                 }
-                print(f"✅ User '{username}' logged in successfully. Token: {token}", flush=True)
+                print(f"✅ User '{matched_user}' logged in successfully. Token: {token}", flush=True)
                 self.write({
                     "status": "success",
-                    "message": f"Welcome back, {username}!",
+                    "message": f"Welcome back, {matched_user}!",
                     "token": token,
-                    "username": username
+                    "username": matched_user
                 })
             else:
                 self.set_status(401)
