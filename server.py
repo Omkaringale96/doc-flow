@@ -2715,6 +2715,33 @@ class ApiBcwaStoresHandler(BaseHandler):
 
             save_bcwa_stores(stores)
 
+            # Save embedded pharmacists from wizard Step 5 if provided
+            embedded_pharmacists = data.get("pharmacists")
+            if embedded_pharmacists and isinstance(embedded_pharmacists, list):
+                all_pharmacists = load_bcwa_pharmacists()
+                for p in embedded_pharmacists:
+                    if isinstance(p, dict) and p.get("pharmacist_name"):
+                        p["store_id"] = store_id
+                        p_id = p.get("id") or f"pharm_{int(datetime.now().timestamp()*1000)}"
+                        p["id"] = p_id
+                        p["updated_at"] = datetime.now().isoformat()
+                        
+                        p_updated = False
+                        for p_idx, existing_p in enumerate(all_pharmacists):
+                            if existing_p.get("id") == p_id or (existing_p.get("mspc_reg_no") and existing_p.get("mspc_reg_no") == p.get("mspc_reg_no")):
+                                all_pharmacists[p_idx] = p
+                                p_updated = True
+                                break
+                        if not p_updated:
+                            all_pharmacists.append(p)
+                        
+                        if db is not None:
+                            try:
+                                db.collection("bcwa_pharmacists").document(p_id).set(p)
+                            except Exception as e:
+                                print(f"⚠️ Firestore embedded pharmacist save note: {e}", flush=True)
+                save_bcwa_pharmacists(all_pharmacists)
+
             if db is not None:
                 try:
                     db.collection("bcwa_stores").document(store_id).set(data)
