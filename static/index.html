@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocFlow Pro - Government Document Preparation Portal</title>
-  <link rel="stylesheet" href="/static/styles.css?v=2.6.0">
+  <link rel="stylesheet" href="/static/styles.css?v=3.0.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -1152,7 +1152,7 @@
 
         <!-- STEP 1: Medical Store Info -->
         <div id="bcwaWizardStep_1" class="wizard-step-panel">
-          <h4 style="color: var(--accent-green); margin-bottom: 1rem;"><i class="fa-solid fa-store"></i> Step 1: Medical Store Basic Information</h4>
+          <h4 style="color: var(--accent-green); margin-bottom: 1rem;"><i class="fa-solid fa-store"></i> Step 1: Medical Store Regulatory Profile & GPS Location</h4>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
             <div class="form-group">
               <label style="font-size: 0.8rem;">Medical Store Name *</label>
@@ -1166,6 +1166,44 @@
                 <option value="Pvt Ltd">Pvt Ltd</option>
                 <option value="LLP">LLP</option>
               </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Drug License Category</label>
+              <select id="bcwaDlCategory" style="font-size: 0.82rem;">
+                <option value="Retail">Retail</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Both Retail & Wholesale">Both Retail & Wholesale</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Store Status</label>
+              <select id="bcwaStoreStatus" style="font-size: 0.82rem;">
+                <option value="Active">Active</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Association Membership No</label>
+              <input type="text" id="bcwaMembershipNo" placeholder="BCWA-MEM-101" style="font-size: 0.82rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">GSTIN Number</label>
+              <input type="text" id="bcwaGstNumber" placeholder="27ABCDE1234F1Z5" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Store PAN Number</label>
+              <input type="text" id="bcwaStorePan" placeholder="ABCDE1234F" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Establishment Date</label>
+              <input type="date" id="bcwaEstDate" style="font-size: 0.82rem;">
             </div>
           </div>
 
@@ -1185,18 +1223,33 @@
             <input type="text" id="bcwaAddress" required placeholder="Shop No, Building, Street / Landmark" style="font-size: 0.85rem;">
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 0.8rem;">
             <div class="form-group">
-              <label style="font-size: 0.78rem;">City / Village</label>
-              <input type="text" id="bcwaCity" value="Boisar" style="font-size: 0.82rem;">
+              <label style="font-size: 0.75rem;">Taluka</label>
+              <input type="text" id="bcwaTaluka" value="Palghar" style="font-size: 0.8rem;">
             </div>
             <div class="form-group">
-              <label style="font-size: 0.78rem;">District</label>
-              <input type="text" id="bcwaDistrict" value="Palghar" style="font-size: 0.82rem;">
+              <label style="font-size: 0.75rem;">City / Village</label>
+              <input type="text" id="bcwaCity" value="Boisar" style="font-size: 0.8rem;">
             </div>
             <div class="form-group">
-              <label style="font-size: 0.78rem;">PIN Code</label>
-              <input type="text" id="bcwaPin" value="401501" style="font-size: 0.82rem;">
+              <label style="font-size: 0.75rem;">District</label>
+              <input type="text" id="bcwaDistrict" value="Palghar" style="font-size: 0.8rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.75rem;">PIN Code</label>
+              <input type="text" id="bcwaPin" value="401501" style="font-size: 0.8rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">GPS Location (Lat, Long)</label>
+              <input type="text" id="bcwaGpsLocation" placeholder="19.8012, 72.7543" style="font-size: 0.82rem;">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.78rem;">Google Maps Link</label>
+              <input type="url" id="bcwaGmapsUrl" placeholder="https://maps.google.com/..." style="font-size: 0.82rem;">
             </div>
           </div>
         </div>
@@ -1336,7 +1389,21 @@
 
         <!-- STEP 6: Store Documents & Compliance Settings -->
         <div id="bcwaWizardStep_6" class="wizard-step-panel" style="display: none;">
-          <h4 style="color: #c084fc; margin-bottom: 1rem;"><i class="fa-solid fa-folder-open"></i> Step 6: Store Documents Vault & 7-Tier Expiry Reminders</h4>
+          <h4 style="color: #c084fc; margin-bottom: 1rem;"><i class="fa-solid fa-folder-open"></i> Step 6: Store Infrastructure, Vault Documents & Reminders</h4>
+
+          <!-- Infrastructure Checklist Block -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem;">
+            <h5 style="color: var(--accent-blue); margin: 0 0 0.6rem 0; font-size: 0.85rem;"><i class="fa-solid fa-snowflake"></i> Infrastructure Facilities Checklist</h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; font-size: 0.78rem; color: var(--text-bright);">
+              <label><input type="checkbox" id="bcwaInfraRefrigerator" checked> Refrigerator Available</label>
+              <label><input type="checkbox" id="bcwaInfraColdStorage" checked> Cold Storage Unit</label>
+              <label><input type="checkbox" id="bcwaInfraTempLogger" checked> Temp Data Logger</label>
+              <label><input type="checkbox" id="bcwaInfraAc" checked> Air Conditioner (AC)</label>
+              <label><input type="checkbox" id="bcwaInfraCctv" checked> CCTV Surveillance</label>
+              <label><input type="checkbox" id="bcwaInfraBilling" checked> Billing Software</label>
+              <label><input type="checkbox" id="bcwaInfraBarcode" checked> Barcode Scanner</label>
+            </div>
+          </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem;">
             <div class="form-group">
@@ -1524,6 +1591,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=2.6.0"></script>
+  <script src="/static/app.js?v=3.0.0"></script>
 </body>
 </html>

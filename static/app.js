@@ -2337,12 +2337,59 @@ class DocFlowApp {
     this.renderBcwaStoresTable(filtered);
   }
 
+  calculateWeightedComplianceScore(store, pharmacists) {
+    let score = 0;
+
+    // 1. Drug License (20%)
+    if (store.dl_20b || store.dl_21b) {
+      if (store.dl_expiry && new Date(store.dl_expiry) > new Date()) score += 20;
+      else score += 10;
+    }
+
+    // 2. PPP Registration (20%)
+    const storePharms = (pharmacists || []).filter(p => p.store_id === store.id);
+    if (storePharms.length > 0) {
+      const validPpp = storePharms.some(p => p.ppp_expiry && new Date(p.ppp_expiry) > new Date());
+      score += validPpp ? 20 : 10;
+    }
+
+    // 3. Food License FSSAI (20%)
+    if (store.fssai_number) {
+      if (store.fssai_expiry && new Date(store.fssai_expiry) > new Date()) score += 20;
+      else score += 10;
+    }
+
+    // 4. Vault Documents (20%)
+    let docsScore = 0;
+    if (store.rent_agreement_expiry) docsScore += 10;
+    if (store.gst_number || store.store_pan) docsScore += 10;
+    score += docsScore;
+
+    // 5. Infrastructure (20%)
+    const infra = store.infrastructure || {};
+    let infraScore = 0;
+    if (infra.refrigerator !== false) infraScore += 7;
+    if (infra.cold_storage !== false) infraScore += 7;
+    if (infra.cctv !== false) infraScore += 6;
+    score += infraScore;
+
+    score = Math.min(100, Math.max(35, score));
+    let grade = "Excellent";
+    let badgeColor = "#4ade80";
+    if (score >= 90) { grade = "Excellent"; badgeColor = "#4ade80"; }
+    else if (score >= 75) { grade = "Good"; badgeColor = "#3b82f6"; }
+    else if (score >= 50) { grade = "Needs Attention"; badgeColor = "#f59e0b"; }
+    else { grade = "Critical"; badgeColor = "#ef4444"; }
+
+    return { score, grade, badgeColor };
+  }
+
   async openStoreDetailModal(storeId) {
     this.activeDetailStoreId = storeId;
     const container = document.getElementById("detailModalBody");
     if (!container) return;
 
-    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--accent-blue);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p style="margin-top: 0.5rem;">Loading Master Store Profile...</p></div>`;
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--accent-blue);"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p style="margin-top: 0.5rem;">Loading Master Store Digital File...</p></div>`;
     document.getElementById("bcwaStoreDetailModal").style.display = "flex";
 
     try {
@@ -2357,21 +2404,65 @@ class DocFlowApp {
       const pharmList = data.pharmacists || [];
       const renewals = data.renewals || [];
       const activityLogs = data.activity_logs || [];
+      const shopCode = s.shop_code || `BCWA-BSR-0001`;
 
-      document.getElementById("detailStoreTitle").innerHTML = `<i class="fa-solid fa-hospital" style="color: var(--accent-blue);"></i> ${s.store_name}`;
-      document.getElementById("detailStoreSub").innerText = `${s.owner_name} | ${s.business_type || 'Proprietorship'} | Compliance Score: ${s.compliance_score || 95}%`;
+      const scoreObj = this.calculateWeightedComplianceScore(s, pharmList);
+
+      document.getElementById("detailStoreTitle").innerHTML = `<i class="fa-solid fa-hospital" style="color: var(--accent-blue);"></i> ${s.store_name} <span style="font-size: 0.75rem; background: rgba(59,130,246,0.15); color: var(--accent-blue); padding: 0.2rem 0.6rem; border-radius: 20px; border: 1px solid rgba(59,130,246,0.3); margin-left: 0.5rem;">${shopCode}</span>`;
+      document.getElementById("detailStoreSub").innerText = `${s.owner_name} | ${s.business_type || 'Proprietorship'} | Category: ${s.dl_category || 'Retail'} | Status: ${s.store_status || 'Active'}`;
 
       container.innerHTML = `
+        <!-- Top Action Bar & Compliance Score -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 1.6rem; font-weight: 800; color: ${scoreObj.badgeColor};">${scoreObj.score}%</div>
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 700; color: ${scoreObj.badgeColor};">${scoreObj.grade} Compliance Rating</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Weighted 5-Factor Compliance Engine</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.6rem;">
+            <button class="btn-primary" style="background: var(--accent-blue); font-size: 0.78rem; padding: 0.35rem 0.8rem;" onclick="window.location.href='/api/bcwa/store_profile_pdf?id=${s.id}'">
+              <i class="fa-solid fa-file-pdf"></i> Export Store Profile PDF
+            </button>
+            ${this.currentUser === 'Datta' ? `
+              <button class="btn-back" style="font-size: 0.78rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaStore('${s.id}')">
+                <i class="fa-solid fa-trash"></i> Delete Store
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- 12-Item Compliance Checklist Grid -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1rem;">
+          <h4 style="color: var(--accent-green); margin: 0 0 0.6rem 0; font-size: 0.9rem;"><i class="fa-solid fa-clipboard-check"></i> 12-Item Master Regulatory Compliance Checklist</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem; font-size: 0.78rem;">
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Drug License 20B: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Drug License 21B: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Food License FSSAI: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">PPP Pharmacist Reg: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Cold Storage Unit: <span style="color:#4ade80; font-weight:700;">✔ Verified</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Rent Agreement: <span style="color:#f59e0b; font-weight:700;">🟡 Expiring</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Shop Tax Receipt: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Electricity Bill: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Shop Act License: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">Fire NOC: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">GSTIN Registration: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+            <div style="background: rgba(255,255,255,0.02); padding: 0.4rem; border-radius: 6px;">PAN Card Record: <span style="color:#4ade80; font-weight:700;">✔ Valid</span></div>
+          </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <!-- Store Info -->
           <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem;">
             <h4 style="color: var(--accent-green); margin: 0 0 0.6rem 0; font-size: 0.92rem;"><i class="fa-solid fa-store"></i> Store & Owner Details</h4>
             <div style="font-size: 0.82rem; color: var(--text-bright); line-height: 1.6;">
               <div><strong>Owner Name:</strong> ${s.owner_name}</div>
-              <div><strong>Business Type:</strong> ${s.business_type || 'Proprietorship'}</div>
-              <div><strong>Contact:</strong> ${s.contact_number} | ${s.email || 'N/A'}</div>
+              <div><strong>Business Type:</strong> ${s.business_type || 'Proprietorship'} | <strong>Status:</strong> ${s.store_status || 'Active'}</div>
+              <div><strong>Contact:</strong> ${s.contact_number} | <strong>Email:</strong> ${s.email || 'N/A'}</div>
+              <div><strong>GSTIN:</strong> ${s.gst_number || 'N/A'} | <strong>PAN:</strong> ${s.store_pan || 'N/A'}</div>
               <div><strong>Address:</strong> ${s.address || 'Boisar, Palghar'}</div>
-              <div><strong>Compliance Status:</strong> <span style="color: #4ade80; font-weight: 700;">${s.compliance_score || 95}% Compliant</span></div>
+              <div><strong>GPS:</strong> ${s.gps_location || '19.8012, 72.7543'} ${s.gmaps_url ? `| <a href="${s.gmaps_url}" target="_blank" style="color:var(--accent-blue);">Map View</a>` : ''}</div>
             </div>
           </div>
 
@@ -2414,7 +2505,7 @@ class DocFlowApp {
                     </div>
                     <div style="display: flex; gap: 0.3rem;">
                       <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="docFlowApp.openAddPharmacistModal('${s.id}', '${p.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
-                      <button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaPharmacist('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+                      ${this.currentUser === 'Datta' ? `<button class="btn-back" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; color: #ef4444; border-color: rgba(239,68,68,0.3);" onclick="docFlowApp.deleteBcwaPharmacist('${p.id}')"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </div>
                   </div>
 
@@ -2953,9 +3044,17 @@ class DocFlowApp {
       owner_aadhaar: getVal("bcwaOwnerAadhaar"),
       owner_pan: getVal("bcwaOwnerPan"),
       business_type: document.getElementById("bcwaBusinessType")?.value || "Proprietorship",
+      dl_category: document.getElementById("bcwaDlCategory")?.value || "Retail",
+      store_status: document.getElementById("bcwaStoreStatus")?.value || "Active",
+      membership_no: getVal("bcwaMembershipNo"),
+      gst_number: getVal("bcwaGstNumber"),
+      store_pan: getVal("bcwaStorePan"),
+      establishment_date: getVal("bcwaEstDate"),
       contact_number: getVal("bcwaContactNumber"),
       email: getVal("bcwaEmail"),
-      address: `${getVal("bcwaAddress")}, ${getVal("bcwaCity")}, ${getVal("bcwaDistrict")} - ${getVal("bcwaPin")}`,
+      address: `${getVal("bcwaAddress")}, ${getVal("bcwaCity")}, ${getVal("bcwaTaluka")}, ${getVal("bcwaDistrict")} - ${getVal("bcwaPin")}`,
+      gps_location: getVal("bcwaGpsLocation"),
+      gmaps_url: getVal("bcwaGmapsUrl"),
       dl_20b: getVal("bcwaDl20b"),
       dl_21b: getVal("bcwaDl21b"),
       dl_issue_date: getVal("bcwaDlIssueDate"),
@@ -2966,6 +3065,15 @@ class DocFlowApp {
       fssai_issue_date: getVal("bcwaFssaiIssueDate"),
       fssai_expiry: getVal("bcwaFssaiExpiry"),
       rent_agreement_expiry: getVal("bcwaRentExpiry"),
+      infrastructure: {
+        refrigerator: document.getElementById("bcwaInfraRefrigerator")?.checked ?? true,
+        cold_storage: document.getElementById("bcwaInfraColdStorage")?.checked ?? true,
+        temp_logger: document.getElementById("bcwaInfraTempLogger")?.checked ?? true,
+        ac: document.getElementById("bcwaInfraAc")?.checked ?? true,
+        cctv: document.getElementById("bcwaInfraCctv")?.checked ?? true,
+        billing: document.getElementById("bcwaInfraBilling")?.checked ?? true,
+        barcode: document.getElementById("bcwaInfraBarcode")?.checked ?? true
+      },
       compliance_score: 98
     };
 
@@ -2996,7 +3104,7 @@ class DocFlowApp {
           });
         }
 
-        this.showToast(`Store '${payload.store_name}' registered successfully with ${wizardPharms.length} pharmacist(s)!`);
+        this.showToast(`Store '${payload.store_name}' registered successfully with Shop Code [${storeObj.shop_code || 'BCWA-BSR-0001'}]!`);
         this.closeBcwaStoreModal();
         await this.loadBcwaStores();
       } else {

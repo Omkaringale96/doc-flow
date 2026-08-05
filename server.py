@@ -774,26 +774,18 @@ class ApiLoginHandler(BaseHandler):
                 return
 
             users_db = load_users()
-            
-            # Case-insensitive username matching
-            matched_user = None
-            for u_name, u_pass in users_db.items():
-                if u_name.lower() == username.lower() and u_pass == password:
-                    matched_user = u_name
-                    break
-
-            if matched_user:
+            if username in users_db and users_db[username] == password:
                 token = uuid.uuid4().hex
                 ACTIVE_SESSIONS[token] = {
-                    "username": matched_user,
+                    "username": username,
                     "created_at": datetime.now().isoformat()
                 }
-                print(f"✅ User '{matched_user}' logged in successfully. Token: {token}", flush=True)
+                print(f"✅ User '{username}' logged in successfully. Token: {token}", flush=True)
                 self.write({
                     "status": "success",
-                    "message": f"Welcome back, {matched_user}!",
+                    "message": f"Welcome back, {username}!",
                     "token": token,
-                    "username": matched_user
+                    "username": username
                 })
             else:
                 self.set_status(401)
@@ -2704,11 +2696,21 @@ class ApiBcwaStoresHandler(BaseHandler):
             if existing_match:
                 store_id = existing_match["id"]
                 data["id"] = store_id
+                if not data.get("shop_code"):
+                    data["shop_code"] = existing_match.get("shop_code") or f"BCWA-BSR-{(len(stores)):04d}"
                 action_text = f"Updated existing Store record '{data.get('store_name')}' via duplicate check"
             else:
                 store_id = data.get("id") or f"store_{int(datetime.now().timestamp()*1000)}"
                 data["id"] = store_id
-                action_text = f"Registered new Medical Store '{data.get('store_name')}'"
+                if not data.get("shop_code"):
+                    next_num = len(stores) + 1
+                    code = f"BCWA-BSR-{next_num:04d}"
+                    existing_codes = [s.get("shop_code", "") for s in stores if s.get("shop_code")]
+                    while code in existing_codes:
+                        next_num += 1
+                        code = f"BCWA-BSR-{next_num:04d}"
+                    data["shop_code"] = code
+                action_text = f"Registered new Medical Store '{data.get('store_name')}' [Shop Code: {data['shop_code']}]"
 
             data["updated_at"] = datetime.now().isoformat()
 
@@ -2722,33 +2724,6 @@ class ApiBcwaStoresHandler(BaseHandler):
                 stores.append(data)
 
             save_bcwa_stores(stores)
-
-            # Save embedded pharmacists from wizard Step 5 if provided
-            embedded_pharmacists = data.get("pharmacists")
-            if embedded_pharmacists and isinstance(embedded_pharmacists, list):
-                all_pharmacists = load_bcwa_pharmacists()
-                for p in embedded_pharmacists:
-                    if isinstance(p, dict) and p.get("pharmacist_name"):
-                        p["store_id"] = store_id
-                        p_id = p.get("id") or f"pharm_{int(datetime.now().timestamp()*1000)}"
-                        p["id"] = p_id
-                        p["updated_at"] = datetime.now().isoformat()
-                        
-                        p_updated = False
-                        for p_idx, existing_p in enumerate(all_pharmacists):
-                            if existing_p.get("id") == p_id or (existing_p.get("mspc_reg_no") and existing_p.get("mspc_reg_no") == p.get("mspc_reg_no")):
-                                all_pharmacists[p_idx] = p
-                                p_updated = True
-                                break
-                        if not p_updated:
-                            all_pharmacists.append(p)
-                        
-                        if db is not None:
-                            try:
-                                db.collection("bcwa_pharmacists").document(p_id).set(p)
-                            except Exception as e:
-                                print(f"⚠️ Firestore embedded pharmacist save note: {e}", flush=True)
-                save_bcwa_pharmacists(all_pharmacists)
 
             if db is not None:
                 try:
@@ -3091,8 +3066,95 @@ class ApiBcwaNotificationHandler(BaseHandler):
                     pass
 
             log_bcwa_activity("NOTIFICATION_SENT", f"Dispatched {channel} alert for '{doc_name}' to {recipient} ({phone})", store_name=store_name)
-
             self.write({"status": "success", "message": f"{channel} reminder sent successfully to {recipient}!", "notification": notif_entry})
+        except Exception as e:
+            traceback.print_exc()
+            self.set_status(500)
+            self.write({"status": "error", "message": str(e)})
+
+
+class ApiBcwaStoreProfilePdfHandler(BaseHandler):
+    async def get(self):
+        try:
+            store_id = self.get_argument("id", default="")
+            if not store_id:
+                self.set_status(400)
+                return self.write({"status": "error", "message": "Store ID required."})
+
+            stores = load_bcwa_stores()
+            s = next((item for item in stores if item.get("id") == store_id), None)
+            if not s:
+                self.set_status(404)
+                return self.write({"status": "error", "message": "Store profile not found."})
+
+            pharmacists = load_bcwa_pharmacists()
+            pharm_list = [p for p in pharmacists if p.get("store_id") == store_id]
+
+            doc = fitz.open()
+            page = doc.new_page(width=595, height=842)
+
+            page.insert_text((40, 50), "BOISAR WELFARE CHEMIST ASSOCIATION (BCWA)", fontsize=16, fontname="hebo", color=(0, 0.4, 0.8))
+            page.insert_text((40, 70), "Pharmacy Government Compliance & Master Store Profile Certificate", fontsize=11, fontname="helv", color=(0.3, 0.3, 0.3))
+            page.draw_line((40, 80), (555, 80), color=(0.8, 0.8, 0.8), width=1)
+
+            y = 110
+            page.insert_text((40, y), f"Shop Code: {s.get('shop_code', 'BCWA-BSR-0001')}", fontsize=12, fontname="hebo")
+            page.insert_text((300, y), f"Compliance Rating: {s.get('compliance_score', 96)}% ({s.get('compliance_grade', 'Excellent')})", fontsize=12, fontname="hebo", color=(0, 0.6, 0.2))
+
+            y += 25
+            page.insert_text((40, y), f"Medical Store Name: {s.get('store_name', 'N/A')}", fontsize=11, fontname="hebo")
+            page.insert_text((300, y), f"Business Type: {s.get('business_type', 'Proprietorship')}", fontsize=10, fontname="helv")
+
+            y += 20
+            page.insert_text((40, y), f"Owner Name: {s.get('owner_name', 'N/A')}", fontsize=10, fontname="helv")
+            page.insert_text((300, y), f"Owner Mobile: {s.get('contact_number', 'N/A')}", fontsize=10, fontname="helv")
+
+            y += 20
+            page.insert_text((40, y), f"Official Address: {s.get('address', 'Boisar, Palghar')}", fontsize=10, fontname="helv")
+
+            y += 20
+            page.insert_text((40, y), f"GST Number: {s.get('gst_number', 'N/A')}", fontsize=10, fontname="helv")
+            page.insert_text((300, y), f"PAN Number: {s.get('pan_number', 'N/A')}", fontsize=10, fontname="helv")
+
+            y += 35
+            page.draw_line((40, y-10), (555, y-10), color=(0.8, 0.8, 0.8), width=0.8)
+            page.insert_text((40, y), "REGULATORY LICENSES & PERMITS", fontsize=12, fontname="hebo", color=(0.8, 0.4, 0))
+
+            y += 22
+            page.insert_text((40, y), f"Drug License (20B): {s.get('dl_20b', 'N/A')}", fontsize=10, fontname="helv")
+            page.insert_text((300, y), f"DL Expiry Date: {s.get('dl_expiry', 'N/A')}", fontsize=10, fontname="hebo")
+
+            y += 20
+            page.insert_text((40, y), f"Drug License (21B): {s.get('dl_21b', 'N/A')}", fontsize=10, fontname="helv")
+            page.insert_text((300, y), f"FSSAI Number: {s.get('fssai_number', 'N/A')}", fontsize=10, fontname="helv")
+
+            y += 20
+            page.insert_text((40, y), f"FSSAI Expiry: {s.get('fssai_expiry', 'N/A')}", fontsize=10, fontname="helv")
+            page.insert_text((300, y), f"Rent Agreement Expiry: {s.get('rent_agreement_expiry', 'N/A')}", fontsize=10, fontname="helv")
+
+            y += 35
+            page.draw_line((40, y-10), (555, y-10), color=(0.8, 0.8, 0.8), width=0.8)
+            page.insert_text((40, y), f"REGISTERED PHARMACISTS ({len(pharm_list)})", fontsize=12, fontname="hebo", color=(0.5, 0, 0.8))
+
+            y += 22
+            if not pharm_list:
+                page.insert_text((40, y), "No pharmacists currently registered.", fontsize=10, fontname="helv", color=(0.5, 0.5, 0.5))
+            else:
+                for idx, p in enumerate(pharm_list[:4]):
+                    page.insert_text((40, y), f"{idx+1}. {p.get('pharmacist_name')} (MSPC: {p.get('mspc_reg_no', 'N/A')})", fontsize=10, fontname="hebo")
+                    page.insert_text((300, y), f"PPP No: {p.get('ppp_number', 'N/A')} | Exp: {p.get('ppp_expiry', 'N/A')}", fontsize=9, fontname="helv")
+                    y += 18
+
+            page.draw_line((40, 790), (555, 790), color=(0.8, 0.8, 0.8), width=1)
+            page.insert_text((40, 805), f"Issued by BCWA Compliance System on {datetime.now().strftime('%d-%b-%Y')}", fontsize=8, fontname="helv", color=(0.4, 0.4, 0.4))
+            page.insert_text((400, 805), "Authorized Digital Certificate", fontsize=8, fontname="hebo", color=(0, 0.4, 0.8))
+
+            out_pdf = doc.tobytes()
+            doc.close()
+
+            self.set_header("Content-Type", "application/pdf")
+            self.set_header("Content-Disposition", f"attachment; filename=BCWA_Store_Profile_{store_id}.pdf")
+            self.write(out_pdf)
         except Exception as e:
             traceback.print_exc()
             self.set_status(500)
@@ -3111,6 +3173,7 @@ def make_app():
         (r"/api/bcwa/stores", ApiBcwaStoresHandler),
         (r"/api/bcwa/add_store", ApiBcwaStoresHandler),
         (r"/api/bcwa/store_detail", ApiBcwaStoreDetailHandler),
+        (r"/api/bcwa/store_profile_pdf", ApiBcwaStoreProfilePdfHandler),
         (r"/api/bcwa/pharmacists", ApiBcwaPharmacistsHandler),
         (r"/api/bcwa/add_pharmacist", ApiBcwaPharmacistsHandler),
         (r"/api/bcwa/export_csv", ApiBcwaExportCsvHandler),
